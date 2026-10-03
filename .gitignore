@@ -18,3 +18,4 @@ todos.json
 
 # Copied from node_modules by scripts/copy-ort.mjs on npm install
 public/ort/
+graphify-out/
