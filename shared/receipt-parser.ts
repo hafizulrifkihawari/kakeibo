@@ -32,7 +32,7 @@ const TOTAL_KEYS = [
 // Lines whose amount is never the total or an item.
 const IGNORE = /小\s*計|お?預[りか]|お?釣[りし銭]?|おつり|釣銭|消費税|税率|税額|内税|外税|対象|ポイント|残高|合計点数|点数|お買上点数|個数|クレジット|現金|電子マネー|交通系|支払方法|カード|TEL|電話|No\.|レジ|責任者|担当/i
 
-const STOP_ITEMS = /小\s*計|合\s*計|お会計(?!券)|総合計/
+const STOP_ITEMS = /小\s*計|合\s*計|お会計(?!券)|総合計|^(sub-?total|total|frete|shipping|imposto)\b/i
 
 const HEADER_NOISE = /領収書|領収証|レシート|いらっしゃいませ|ありがとう|毎度|またお越し|TEL|電話|〒|登録番号|インボイス|^T\d{13}|http|www\.|営業時間/i
 
@@ -142,7 +142,7 @@ function parseTotal(lines: string[]): number | null {
     const a = lineAmount(line)
     if (a && a > 0 && /¥|円/.test(line)) amounts.push({ value: a, line })
 
-    const isSub = /小\s*計|合計点数|点数/.test(line)
+    const isSub = /小\s*計|合計点数|点数|sub-?total/i.test(line)
     const keyIdx = TOTAL_KEYS.findIndex((k) => k.test(line))
     const weight = keyIdx >= 0 && !isSub ? 4 : FUZZY_TOTAL.test(line) && !isSub ? 2 : 0
     if (!weight) continue

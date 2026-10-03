@@ -3,7 +3,7 @@ import { glossKey, type Gloss } from '../../shared/gloss'
 import { ITEM_KIND_IDS, isItemKind } from '../../shared/products'
 import { lookupCatalog } from './catalog'
 
-const MODEL = '@cf/google/gemma-4-26b-a4b-it'
+export const MODEL = '@cf/google/gemma-4-26b-a4b-it'
 const MAX_NAMES = 30
 
 const PROMPT = `You annotate item names from Japanese shop receipts. The names come from OCR, so some characters can be wrong.
@@ -34,7 +34,7 @@ const SCHEMA = {
   required: ['items'],
 }
 
-function replyText(out: unknown): string {
+export function replyText(out: unknown): string {
   const o = out as { response?: unknown; choices?: { message?: { content?: string } }[] }
   if (typeof o?.response === 'string') return o.response
   if (o?.response && typeof o.response === 'object') return JSON.stringify(o.response)

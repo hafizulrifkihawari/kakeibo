@@ -2,10 +2,13 @@
 // - OCR models, WASM, build assets, fonts: cache first (they never change at the same URL).
 // - Pages: network first, cached copy when offline.
 // - Server functions (/_serverFn): never cached; the app queues writes itself.
+// - POST /share-email: an .eml file shared from another app (manifest share_target).
 // Bump to drop old caches after a deploy.
-const VERSION = 'v3'
+const VERSION = 'v4'
 const STATIC = `static-${VERSION}`
 const PAGES = `pages-${VERSION}`
+// Must match SHARED_EMAIL in src/routes/_app/add.tsx.
+const SHARE = 'share'
 // Precached responses carry Vary headers that a module-script request would not match.
 const MATCH = { ignoreVary: true }
 
@@ -28,7 +31,7 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => ![STATIC, PAGES].includes(k)).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => ![STATIC, PAGES, SHARE].includes(k)).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   )
 })
@@ -46,8 +49,22 @@ function isStatic(url) {
 
 self.addEventListener('fetch', (e) => {
   const req = e.request
-  if (req.method !== 'GET') return
   const url = new URL(req.url)
+  if (req.method === 'POST' && url.pathname === '/share-email') {
+    // Keep the file for the add page, then open it there.
+    e.respondWith(
+      req
+        .formData()
+        .then((form) => {
+          const file = form.get('email')
+          return file && caches.open(SHARE).then((c) => c.put('/shared-email', new Response(file)))
+        })
+        .catch(() => {})
+        .then(() => Response.redirect('/add?mode=email&shared=1', 303)),
+    )
+    return
+  }
+  if (req.method !== 'GET') return
   if (url.pathname.startsWith('/_serverFn')) return
 
   if (req.mode === 'navigate') {

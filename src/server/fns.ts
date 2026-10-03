@@ -23,9 +23,11 @@ import {
   setProductKind as setKind,
 } from './products'
 import { visionOcr, visionUsage } from './vision'
+import { extractOrder } from './email-extract'
+import { checkOrder, type CheckedOrder } from '../../shared/email-check'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-const ENGINES: OcrEngine[] = ['vision', 'paddle', 'paste', 'manual']
+const ENGINES: OcrEngine[] = ['vision', 'paddle', 'paste', 'email', 'manual']
 
 function str(v: unknown, max = 500): string {
   return typeof v === 'string' ? v.slice(0, max) : ''
@@ -350,6 +352,22 @@ export const glossItems = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     await requireUser()
     return glossFromCache(data.names)
+  })
+
+// ── Order emails ────────────────────────────────────────────────────────
+
+export const extractEmail = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => {
+    const o = (input ?? {}) as Record<string, unknown>
+    const text = str(o.text, 20_000).trim()
+    if (!text) throw new Error('The email has no text.')
+    const date = str(o.date, 10)
+    return { text, from: str(o.from, 200), subject: str(o.subject, 300), date: DATE_RE.test(date) ? date : '' }
+  })
+  .handler(async ({ data }): Promise<CheckedOrder | null> => {
+    await requireUser()
+    const order = await extractOrder(data)
+    return order && checkOrder(order)
   })
 
 // ── Products and prices ─────────────────────────────────────────────────

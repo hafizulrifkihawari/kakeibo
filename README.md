@@ -7,6 +7,7 @@ A mobile web app (PWA) that reads Japanese receipts and tracks spending by day a
 - **Auth:** email + password. Passwords are PBKDF2-SHA256 hashes (100,000 iterations, random salt). Session tokens are stored as SHA-256 hashes.
 - **Item names:** each item shows its furigana reading `[…]` and an English translation `(…)`. Workers AI (free plan, no key) makes them once per name. D1 keeps them in the `item_gloss` table.
 - **Prices:** each item links to a product. The AI corrects OCR errors in the name, so "力ルe 堅あけポ" and "カルビー 堅あげポ" become one product. The scan form compares each price with your last purchase. The Prices tab shows the price history and the cheapest store. Tap the 🔗 link on an item to change its product. Multi-pack lines ("2個 × 単158") compare by the price of one piece. Lines sold by weight ("298g × @198/100g") and packs with a size in the name ("300g", "350ml", "500ml×24本") compare by the price per 100 g or 100 ml, so different pack sizes of one product compare too.
+- **Order emails:** Add → Email opens an `.eml` file (Proton Mail: ⋯ → Export; Gmail: ⋮ → Download message). Add → Paste text → "Read as order email" reads copied email text. On Android, you can also share an `.eml` file to the installed app. Workers AI reads the store, date, items, shipping, and total. The app checks that the items plus shipping equal the total. If the AI is not available, the receipt parser reads the text.
 - **Offline:** the service worker caches the app and the OCR models. Expenses saved offline wait in a queue and sync on reconnect.
 
 ## Local development
@@ -43,6 +44,8 @@ The service worker runs only in production builds. To test offline use, run `npm
 | Path | What it holds |
 |---|---|
 | `shared/receipt-parser.ts` | Japanese receipt parser: store, date (incl. 令和), total (合計 vs お預り/お釣り), items |
+| `shared/email-text.ts`, `shared/email-check.ts` | `.eml` reader (MIME, base64, quoted-printable, charsets), HTML to text, and the order total check |
+| `src/server/email-extract.ts` | Workers AI prompt that reads an order email |
 | `shared/grocery-catalog.ts` | Seed list of common groceries (shared catalog). Run `npm run catalog` after an edit, then apply migrations |
 | `shared/products.ts` | Product kinds and the product key that merges the same product |
 | `src/server/products.ts` | Product linking, price stats, price history |

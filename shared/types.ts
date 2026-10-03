@@ -1,7 +1,7 @@
 import type { CategoryId } from './categories'
 import type { ItemKind, MeasureUnit } from './products'
 
-export type OcrEngine = 'vision' | 'paddle' | 'paste' | 'manual'
+export type OcrEngine = 'vision' | 'paddle' | 'paste' | 'email' | 'manual'
 
 export interface ExpenseItem {
   name: string

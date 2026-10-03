@@ -23,7 +23,7 @@ export function AddSheet({ open, onClose }: { open: boolean; onClose: () => void
     navigate({ to: '/add', search: { mode: 'photo' } })
   }
 
-  function go(mode: 'paste' | 'manual') {
+  function go(mode: 'paste' | 'email' | 'manual') {
     onClose()
     navigate({ to: '/add', search: { mode } })
   }
@@ -49,6 +49,10 @@ export function AddSheet({ open, onClose }: { open: boolean; onClose: () => void
               <button className="btn" onClick={() => go('paste')}>
                 <span className="ico" aria-hidden>📋</span>
                 Paste text
+              </button>
+              <button className="btn" onClick={() => go('email')}>
+                <span className="ico" aria-hidden>✉️</span>
+                Email
               </button>
               <button className="btn" onClick={() => go('manual')}>
                 <span className="ico" aria-hidden>✍️</span>
