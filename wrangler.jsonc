@@ -1,0 +1,29 @@
+/**
+ * Wrangler configuration: https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "kakeibo",
+	"compatibility_date": "2025-09-02",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "@tanstack/react-start/server-entry",
+	"observability": { "enabled": true },
+	"upload_source_maps": true,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "jp-expense",
+			"database_id": "9a670842-2bc7-473f-97ea-0b7962352e11",
+			"migrations_dir": "migrations"
+		}
+	],
+	// Workers AI: furigana and English for receipt items (free plan: 10,000 neurons per day).
+	"ai": { "binding": "AI", "remote": true },
+	"vars": {
+		// Stop calling Google Vision at this many images per month (free tier: 1,000).
+		"VISION_MONTHLY_LIMIT": "950"
+	}
+	// Secret (not in this file): GOOGLE_VISION_API_KEY
+	//   local: put it in .dev.vars
+	//   production: npx wrangler secret put GOOGLE_VISION_API_KEY
+}

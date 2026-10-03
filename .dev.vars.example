@@ -1,0 +1,2 @@
+# Copy to .dev.vars for local development. Leave empty to test the on-device OCR fallback.
+GOOGLE_VISION_API_KEY=
