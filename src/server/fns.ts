@@ -6,12 +6,17 @@ import { isChargeKind, type ExpenseCharge } from '../../shared/charges'
 import type { Expense, OcrEngine, User } from '../../shared/types'
 import {
   createSession,
+  currentSessionHash,
   destroySession,
   getSessionUser,
   hashPassword,
+  randomToken,
   requireUser,
+  sha256,
   verifyPassword,
 } from './auth'
+import { EMAIL_RE, MIN_PASSWORD } from '../../shared/password'
+import { appUrl, botUsername, sendTelegram, telegramConfigured } from './telegram'
 import { isItemKind, isMeasureUnit, productKey } from '../../shared/products'
 import { glossItems as glossFromCache } from './gloss'
 import {
@@ -38,9 +43,13 @@ function credentials(input: unknown): { email: string; password: string } {
   const o = (input ?? {}) as Record<string, unknown>
   const email = str(o.email, 254).trim().toLowerCase()
   const password = str(o.password, 200)
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.')
-  if (password.length < 8) throw new Error('The password must have at least 8 characters.')
+  if (!EMAIL_RE.test(email)) throw new Error('Enter a valid email address.')
+  checkNewPassword(password)
   return { email, password }
+}
+
+function checkNewPassword(password: string) {
+  if (password.length < MIN_PASSWORD) throw new Error(`The password must have at least ${MIN_PASSWORD} characters.`)
 }
 
 // ── Auth ────────────────────────────────────────────────────────────────
@@ -61,7 +70,7 @@ export const register = createServerFn({ method: 'POST' })
       .first<{ id: number }>()
     if (!row) throw new Error('An account with this email already exists.')
     await createSession(row.id)
-    return { id: row.id, email: data.email }
+    return { id: row.id, email: data.email, telegramLinked: false }
   })
 
 export const login = createServerFn({ method: 'POST' })
@@ -71,17 +80,157 @@ export const login = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }): Promise<User> => {
     const user = await env.DB.prepare(
-      'SELECT id, email, password_hash, salt, iterations FROM users WHERE email = ?',
+      `SELECT id, email, password_hash, salt, iterations, telegram_chat_id
+       FROM users WHERE email = ?`,
     )
       .bind(data.email)
-      .first<{ id: number; email: string; password_hash: string; salt: string; iterations: number }>()
+      .first<UserRow>()
     // Hash even when the user does not exist, so response time does not reveal valid emails.
     const ok = user
       ? await verifyPassword(data.password, user)
       : (await hashPassword(data.password), false)
     if (!user || !ok) throw new Error('The email or password is not correct.')
     await createSession(user.id)
-    return { id: user.id, email: user.email }
+    return { id: user.id, email: user.email, telegramLinked: user.telegram_chat_id !== null }
+  })
+
+interface UserRow {
+  id: number
+  email: string
+  password_hash: string
+  salt: string
+  iterations: number
+  telegram_chat_id: number | null
+}
+
+async function setPassword(userId: number, password: string) {
+  const { hash, salt, iterations } = await hashPassword(password)
+  await env.DB.prepare('UPDATE users SET password_hash = ?, salt = ?, iterations = ? WHERE id = ?')
+    .bind(hash, salt, iterations, userId)
+    .run()
+}
+
+export const changePassword = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => {
+    const o = (input ?? {}) as Record<string, unknown>
+    const next = str(o.next, 200)
+    checkNewPassword(next)
+    return { current: str(o.current, 200), next }
+  })
+  .handler(async ({ data }) => {
+    const me = await requireUser()
+    const user = await env.DB.prepare(
+      'SELECT id, email, password_hash, salt, iterations, telegram_chat_id FROM users WHERE id = ?',
+    )
+      .bind(me.id)
+      .first<UserRow>()
+    if (!user || !(await verifyPassword(data.current, user))) {
+      throw new Error('The current password is not correct.')
+    }
+    await setPassword(user.id, data.next)
+    // Keep this device signed in; sign out the others.
+    await env.DB.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?')
+      .bind(user.id, (await currentSessionHash()) ?? '')
+      .run()
+    if (user.telegram_chat_id !== null) {
+      await sendTelegram(user.telegram_chat_id, 'Your Kakeibo password was changed.').catch(() => {})
+    }
+    return null
+  })
+
+// ── Password reset through Telegram ─────────────────────────────────────
+
+const LINK_MINUTES = 10
+const RESET_MINUTES = 30
+const RESETS_PER_HOUR = 3
+
+/** A t.me link that opens the bot; pressing Start sends the token to /api/telegram. */
+export const startTelegramLink = createServerFn({ method: 'POST' }).handler(async () => {
+  const me = await requireUser()
+  if (!telegramConfigured()) throw new Error('Telegram is not set up on this server.')
+  // 16 bytes = 32 hex chars; a start parameter holds at most 64.
+  const token = randomToken(16)
+  const now = Date.now()
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM telegram_links WHERE user_id = ? OR expires_at <= ?').bind(me.id, now),
+    env.DB.prepare('INSERT INTO telegram_links (token_hash, user_id, expires_at) VALUES (?, ?, ?)').bind(
+      await sha256(token),
+      me.id,
+      now + LINK_MINUTES * 60_000,
+    ),
+  ])
+  return { url: `https://t.me/${await botUsername()}?start=${token}` }
+})
+
+export const unlinkTelegram = createServerFn({ method: 'POST' }).handler(async () => {
+  const me = await requireUser()
+  await env.DB.prepare('UPDATE users SET telegram_chat_id = NULL WHERE id = ?').bind(me.id).run()
+  return null
+})
+
+/** Sends a reset link to the user's Telegram. The reply is the same for every email. */
+export const requestPasswordReset = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => {
+    const o = (input ?? {}) as Record<string, unknown>
+    return { email: str(o.email, 254).trim().toLowerCase() }
+  })
+  .handler(async ({ data }) => {
+    const user = await env.DB.prepare('SELECT id, telegram_chat_id FROM users WHERE email = ?')
+      .bind(data.email)
+      .first<{ id: number; telegram_chat_id: number | null }>()
+    if (!user || user.telegram_chat_id === null || !telegramConfigured()) return null
+    const now = Date.now()
+    const recent = await env.DB.prepare(
+      'SELECT count(*) AS n FROM password_resets WHERE user_id = ? AND created_at > ?',
+    )
+      .bind(user.id, now - 3_600_000)
+      .first<{ n: number }>()
+    if ((recent?.n ?? 0) >= RESETS_PER_HOUR) return null
+    const token = randomToken()
+    await env.DB.prepare(
+      'INSERT INTO password_resets (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
+    )
+      .bind(await sha256(token), user.id, now, now + RESET_MINUTES * 60_000)
+      .run()
+    try {
+      await sendTelegram(
+        user.telegram_chat_id,
+        `Reset your Kakeibo password (the link works once, for ${RESET_MINUTES} minutes):\n` +
+          `${appUrl()}/reset-password?token=${token}\n\nIf you did not ask for this, ignore this message.`,
+      )
+    } catch (e) {
+      // The user may have blocked the bot. Do not show this to the caller.
+      console.error('reset link', e)
+    }
+    return null
+  })
+
+export const resetPassword = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => {
+    const o = (input ?? {}) as Record<string, unknown>
+    const password = str(o.password, 200)
+    checkNewPassword(password)
+    return { token: str(o.token, 64), password }
+  })
+  .handler(async ({ data }) => {
+    const now = Date.now()
+    // Mark the token used in the same statement that checks it, so it works only once.
+    const reset = await env.DB.prepare(
+      `UPDATE password_resets SET used_at = ?
+       WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? RETURNING user_id`,
+    )
+      .bind(now, await sha256(data.token), now)
+      .first<{ user_id: number }>()
+    if (!reset) throw new Error('This reset link is not valid any more. Ask for a new one.')
+    await setPassword(reset.user_id, data.password)
+    await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(reset.user_id).run()
+    const user = await env.DB.prepare('SELECT telegram_chat_id FROM users WHERE id = ?')
+      .bind(reset.user_id)
+      .first<{ telegram_chat_id: number | null }>()
+    if (user?.telegram_chat_id != null) {
+      await sendTelegram(user.telegram_chat_id, 'Your Kakeibo password was changed.').catch(() => {})
+    }
+    return null
   })
 
 export const logout = createServerFn({ method: 'POST' }).handler(async () => {

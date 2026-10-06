@@ -38,7 +38,32 @@ The service worker runs only in production builds. To test offline use, run `npm
    ```
 3. Deploy with `npm run deploy`. Open the `kakeibo.<subdomain>.workers.dev` URL on your phone, then use "Add to Home Screen".
 
+4. Optional: password reset through Telegram (free, no domain needed).
+   1. In Telegram, message @BotFather, send `/newbot`, and copy the bot token.
+   2. Make a webhook secret (letters, digits, `_` and `-` only), for example `openssl rand -hex 24`.
+   3. Store both values, apply the migrations, deploy, then point the bot at the app:
+      ```sh
+      npx wrangler secret put TELEGRAM_BOT_TOKEN
+      npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
+      npx wrangler d1 migrations apply jp-expense --remote
+      npm run deploy
+      TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... npm run telegram:webhook
+      ```
+   4. Each user opens Settings and taps "Link Telegram". "Forgot password?" on the login page then sends a one-time reset link (30 minutes, 3 per hour) to that chat.
+
+   `APP_URL` in `wrangler.jsonc` is the address in the reset links. Change it if your `workers.dev` subdomain is different.
+
 `VISION_MONTHLY_LIMIT` in `wrangler.jsonc` (default 950) is the point where the app stops calling Vision for the month. The Vision free tier is 1,000 images per month.
+
+## Account recovery without Telegram
+
+A user who did not link Telegram can't reset the password from the app. Set a temporary password from your computer:
+
+```sh
+npm run admin -- reset someone@example.com --remote   # leave out --remote for the local database
+```
+
+The script prints the temporary password and logs out every device of that user. The user then changes it in Settings.
 
 ## Layout
 
@@ -52,6 +77,8 @@ The service worker runs only in production builds. To test offline use, run `npm
 | `src/server/products.ts` | Product linking, price stats, price history |
 | `shared/categorizer.ts` | Category from user rules, then known chains, then item keywords |
 | `src/server/` | Server functions, auth, Vision call with the quota counter |
+| `shared/password.ts` | PBKDF2 password hashing and random tokens (used by the Worker and `scripts/admin.ts`) |
+| `src/server/telegram.ts`, `src/routes/api/telegram.ts` | Telegram Bot API calls, and the webhook that links a chat to a user |
 | `src/client/ocr/paddle.ts` | PP-OCRv5 detection + recognition on onnxruntime-web |
 | `src/routes/_app/` | Signed-in screens: Home, Calendar (month), Day, Add, Edit, Settings |
 | `public/models/` | PP-OCRv5 mobile ONNX models (Apache-2.0, from PaddlePaddle on Hugging Face) |

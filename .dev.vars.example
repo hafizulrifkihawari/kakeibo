@@ -1,2 +1,10 @@
 # Copy to .dev.vars for local development. Leave empty to test the on-device OCR fallback.
 GOOGLE_VISION_API_KEY=
+
+# Telegram bot for password reset links (from @BotFather). Leave empty to turn off the reset.
+TELEGRAM_BOT_TOKEN=
+# Any random string. Telegram sends it back with each webhook call.
+TELEGRAM_WEBHOOK_SECRET=
+APP_URL=http://localhost:3000
+# Tests only: send Bot API calls to a mock server instead of Telegram.
+# TELEGRAM_API=http://localhost:8099

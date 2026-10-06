@@ -303,6 +303,14 @@ textarea.input {
   padding: 6px 14px;
 }
 
+.notice {
+  background: var(--accent-soft);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.9375rem;
+}
+
 .error {
   background: color-mix(in srgb, var(--danger) 12%, transparent);
   color: var(--danger);

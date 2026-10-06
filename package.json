@@ -14,7 +14,9 @@
     "cf-typegen": "wrangler types",
     "postinstall": "node scripts/copy-ort.mjs",
     "test": "vitest run",
-    "catalog": "tsx scripts/gen-catalog-sql.ts"
+    "catalog": "tsx scripts/gen-catalog-sql.ts",
+    "admin": "tsx scripts/admin.ts",
+    "telegram:webhook": "tsx scripts/telegram-webhook.ts"
   },
   "dependencies": {
     "@tanstack/query-async-storage-persister": "^5.104.0",

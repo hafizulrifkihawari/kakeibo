@@ -43,4 +43,5 @@ export interface Expense {
 export interface User {
   id: number
   email: string
+  telegramLinked: boolean
 }

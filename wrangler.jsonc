@@ -21,9 +21,11 @@
 	"ai": { "binding": "AI", "remote": true },
 	"vars": {
 		// Stop calling Google Vision at this many images per month (free tier: 1,000).
-		"VISION_MONTHLY_LIMIT": "950"
+		"VISION_MONTHLY_LIMIT": "950",
+		// The public address, for links that the Telegram bot sends. .dev.vars sets it for local use.
+		"APP_URL": "https://kakeibo.jp-expense-tracker.workers.dev"
 	}
-	// Secret (not in this file): GOOGLE_VISION_API_KEY
-	//   local: put it in .dev.vars
-	//   production: npx wrangler secret put GOOGLE_VISION_API_KEY
+	// Secrets (not in this file): GOOGLE_VISION_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET
+	//   local: put them in .dev.vars
+	//   production: npx wrangler secret put <NAME>
 }

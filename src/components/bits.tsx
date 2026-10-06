@@ -191,3 +191,49 @@ export function Toast({ toast, onDone }: { toast: ToastState | null; onDone: () 
     </div>
   )
 }
+
+/** A password field with an eye button that shows or hides what the user types. */
+export function PasswordInput(props: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'className'>) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className="password-wrap">
+      <input
+        className="input"
+        type={show ? 'text' : 'password'}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        {...props}
+      />
+      <button
+        type="button"
+        className="icon-btn password-toggle"
+        aria-label={show ? 'Hide password' : 'Show password'}
+        aria-pressed={show}
+        onClick={() => setShow((v) => !v)}
+      >
+        <EyeIcon off={show} />
+      </button>
+    </div>
+  )
+}
+
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {off && <path d="M3 3l18 18" />}
+    </svg>
+  )
+}
