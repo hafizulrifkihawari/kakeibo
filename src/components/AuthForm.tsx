@@ -9,6 +9,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const qc = useQueryClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const isLogin = mode === 'login'
@@ -66,15 +67,29 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
         </label>
         <label className="field">
           <span>Password</span>
-          <input
-            className="input"
-            type="password"
-            autoComplete={isLogin ? 'current-password' : 'new-password'}
-            minLength={isLogin ? undefined : 8}
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="password-wrap">
+            <input
+              className="input"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              minLength={isLogin ? undefined : 8}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="icon-btn password-toggle"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((v) => !v)}
+            >
+              <EyeIcon off={showPassword} />
+            </button>
+          </div>
           {!isLogin && <small className="muted">At least 8 characters.</small>}
         </label>
         <button className="btn btn-primary btn-block" disabled={busy}>
@@ -89,5 +104,25 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
         </Link>
       </p>
     </main>
+  )
+}
+
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {off && <path d="M3 3l18 18" />}
+    </svg>
   )
 }

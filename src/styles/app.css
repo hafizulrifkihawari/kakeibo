@@ -274,6 +274,24 @@ a {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap .input {
+  padding-right: var(--tap);
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
 textarea.input {
   min-height: 140px;
   resize: vertical;
