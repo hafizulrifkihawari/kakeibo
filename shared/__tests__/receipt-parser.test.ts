@@ -4,6 +4,7 @@ import { lineAmount, parseDate, parseMeasure, parseQty, parseReceipt } from '../
 import { categorize } from '../categorizer'
 import { basisPrices, isItemKind, linkedProduct, matchKeys, parseSize, productKey, toKatakana } from '../products'
 import { GROCERY_CATALOG } from '../grocery-catalog'
+import { chargeTotal } from '../charges'
 
 const today = new Date('2026-10-02T12:00:00+09:00')
 
@@ -180,6 +181,7 @@ describe('GOREMO receipt', () => {
     expect(r.total).toBe(1288)
     expect(r.items.map((i) => i.price)).toEqual(prices)
     expect(r.items[0].name).toBe('サントリー CCレ')
+    expect(r.charges).toEqual([{ kind: 'tax', name: '消費税 8%', amount: 95 }])
     expect(categorize({ store: r.store!, text, items: r.items })).toBe('groceries')
   })
 
@@ -192,6 +194,48 @@ describe('GOREMO receipt', () => {
     expect(r.total).toBe(1288)
     expect(r.items.map((i) => i.price)).toEqual(prices)
     expect(categorize({ store: r.store!, text, items: r.items })).toBe('groceries')
+  })
+})
+
+// A real receipt from 業務スーパー (Kyoto): prices before tax, with 8% tax added on top (外税).
+describe('業務スーパー receipt', () => {
+  const text = readFileSync(new URL('./fixtures/gyomu.paddle.txt', import.meta.url), 'utf8')
+
+  it('reads the items and puts the tax in the charges', () => {
+    const r = parseReceipt(text, today)
+    expect(r.store).toBe('業務スーパー 西陣店')
+    expect(r.date).toBe('2026-10-06')
+    expect(r.total).toBe(3647)
+    expect(r.items.map((i) => i.price)).toEqual([298, 302, 1448, 428, 178, 218, 88, 198, 219])
+    // One tax line, not three: 08外税, 外税計, and (税合計) all show the same ¥270.
+    expect(r.charges).toEqual([{ kind: 'tax', name: '消費税 8%', amount: 270 }])
+    expect(r.items.reduce((s, i) => s + i.price, 0) + chargeTotal(r.charges)).toBe(r.total)
+  })
+})
+
+describe('receipt charges', () => {
+  it('reads the tax of each rate', () => {
+    const r = parseReceipt('パン ¥200\n牛乳 ¥300\n小計 ¥500\n10外税 ¥20\n08外税 ¥24\n外税計 ¥44\n合計 ¥544', today)
+    expect(r.charges.map((c) => [c.name, c.amount])).toEqual([
+      ['消費税 10%', 20],
+      ['消費税 8%', 24],
+    ])
+  })
+
+  it('does not add tax that the prices include (内税)', () => {
+    const r = parseReceipt('パン ¥200\n牛乳 ¥300\n合計 ¥500\n(内消費税等 ¥37)\n消費税等 ¥37', today)
+    expect(r.charges).toEqual([])
+  })
+
+  it('adds a plain 消費税 line when items + tax = total', () => {
+    const r = parseReceipt('パン ¥200\n牛乳 ¥300\n小計 ¥500\n消費税 ¥40\n合計 ¥540', today)
+    expect(r.charges).toEqual([{ kind: 'tax', name: '消費税', amount: 40 }])
+  })
+
+  it('moves a shipping line out of the items', () => {
+    const r = parseReceipt('米 5kg ¥2,980\n送料 ¥800\n合計 ¥3,780', today)
+    expect(r.items.map((i) => i.name)).toEqual(['米 5kg'])
+    expect(r.charges).toEqual([{ kind: 'shipping', name: '送料', amount: 800 }])
   })
 })
 

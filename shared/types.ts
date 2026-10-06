@@ -1,4 +1,5 @@
 import type { CategoryId } from './categories'
+import type { ExpenseCharge } from './charges'
 import type { ItemKind, MeasureUnit } from './products'
 
 export type OcrEngine = 'vision' | 'paddle' | 'paste' | 'email' | 'manual'
@@ -33,6 +34,8 @@ export interface Expense {
   ocrEngine: OcrEngine
   rawText: string
   items: ExpenseItem[]
+  /** Tax, shipping, fees, and discounts: costs that are not a product. Missing in data saved before charges existed. */
+  charges?: ExpenseCharge[]
   /** Epoch ms of the last edit. The newest edit wins on sync. */
   updatedAt: number
 }

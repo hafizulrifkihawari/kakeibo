@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { env } from 'cloudflare:workers'
 import { isCategoryId, type CategoryId } from '../../shared/categories'
 import type { CategoryRule } from '../../shared/categorizer'
+import { isChargeKind, type ExpenseCharge } from '../../shared/charges'
 import type { Expense, OcrEngine, User } from '../../shared/types'
 import {
   createSession,
@@ -122,6 +123,7 @@ export const listExpenses = createServerFn({ method: 'GET' })
       .all<ExpenseRow>()
 
     const items = new Map<string, Expense['items']>()
+    const charges = new Map<string, ExpenseCharge[]>()
     if (results.length) {
       const { results: itemRows } = await env.DB.prepare(
         `SELECT i.expense_id, i.name, i.price, i.qty, i.unit, i.size, i.size_unit, p.name AS product,
@@ -155,6 +157,20 @@ export const listExpenses = createServerFn({ method: 'GET' })
         list.push(item)
         items.set(r.expense_id, list)
       }
+
+      const { results: chargeRows } = await env.DB.prepare(
+        `SELECT c.expense_id, c.kind, c.name, c.amount FROM expense_charges c
+         JOIN expenses e ON e.id = c.expense_id
+         WHERE e.user_id = ? AND e.deleted_at IS NULL AND e.date BETWEEN ? AND ?
+         ORDER BY c.expense_id, c.sort`,
+      )
+        .bind(user.id, data.from, data.to)
+        .all<{ expense_id: string; kind: string; name: string; amount: number }>()
+      for (const r of chargeRows) {
+        const list = charges.get(r.expense_id) ?? []
+        list.push({ kind: isChargeKind(r.kind) ? r.kind : 'other', name: r.name, amount: r.amount })
+        charges.set(r.expense_id, list)
+      }
     }
 
     return results.map((r) => ({
@@ -167,6 +183,7 @@ export const listExpenses = createServerFn({ method: 'GET' })
       ocrEngine: (ENGINES.includes(r.ocr_engine as OcrEngine) ? r.ocr_engine : 'manual') as OcrEngine,
       rawText: r.raw_text ?? '',
       items: items.get(r.id) ?? [],
+      charges: charges.get(r.id) ?? [],
       updatedAt: r.updated_at,
     }))
   })
@@ -197,6 +214,7 @@ function validateExpense(input: unknown): Expense {
   if (!DATE_RE.test(date)) throw new Error('Enter a valid date.')
   if (!Number.isInteger(amount) || Math.abs(amount) > 100_000_000) throw new Error('Enter a valid amount.')
   const items = Array.isArray(o.items) ? o.items.slice(0, 200) : []
+  const charges = Array.isArray(o.charges) ? o.charges.slice(0, 20) : []
   return {
     id,
     date,
@@ -221,6 +239,16 @@ function validateExpense(input: unknown): Expense {
         }
       })
       .filter((i) => i.name && Number.isFinite(i.price)),
+    charges: charges
+      .map((raw) => {
+        const c = (raw ?? {}) as Record<string, unknown>
+        return {
+          kind: isChargeKind(c.kind) ? c.kind : 'other',
+          name: str(c.name, 100).trim(),
+          amount: Math.trunc(Number(c.amount)),
+        } satisfies ExpenseCharge
+      })
+      .filter((c) => Number.isFinite(c.amount) && c.amount !== 0 && Math.abs(c.amount) <= 100_000_000),
     updatedAt: Number.isFinite(Number(o.updatedAt)) ? Number(o.updatedAt) : Date.now(),
   }
 }
@@ -249,12 +277,18 @@ export const saveExpense = createServerFn({ method: 'POST' })
 
     await resolveProducts(e.items)
     const productIds = await ensureProducts(user.id, e.items)
+    const charges = e.charges ?? []
+    const insertCharge = env.DB.prepare(
+      'INSERT INTO expense_charges (expense_id, kind, name, amount, sort) VALUES (?, ?, ?, ?, ?)',
+    )
     const insert = env.DB.prepare(
       `INSERT INTO expense_items (expense_id, name, price, sort, product_id, qty, unit, size, size_unit, kind)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     await env.DB.batch([
       env.DB.prepare('DELETE FROM expense_items WHERE expense_id = ?').bind(e.id),
+      env.DB.prepare('DELETE FROM expense_charges WHERE expense_id = ?').bind(e.id),
+      ...charges.map((c, i) => insertCharge.bind(e.id, c.kind, c.name, c.amount, i)),
       ...e.items.map((item, i) =>
         insert.bind(
           e.id,

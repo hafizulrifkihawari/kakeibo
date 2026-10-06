@@ -89,7 +89,7 @@ describe('checkOrder', () => {
     total: 13180,
   }
 
-  it('adds shipping as an item and passes when the sum is the total', () => {
+  it('adds shipping as a charge and passes when the sum is the total', () => {
     const r = checkOrder(order)
     expect(r.needsReview).toBe(false)
     expect(r.total).toBe(13180)
@@ -99,9 +99,8 @@ describe('checkOrder', () => {
       [1500, undefined],
       [3380, 2],
       [2500, undefined],
-      [1500, undefined],
     ])
-    expect(r.items.at(-1)!.name).toBe(SHIPPING_NAME)
+    expect(r.charges).toEqual([{ kind: 'shipping', name: SHIPPING_NAME, amount: 1500 }])
   })
 
   it('flags an order when the AI counts a tax line as an item', () => {
@@ -110,7 +109,9 @@ describe('checkOrder', () => {
   })
 
   it('subtracts a discount and allows ¥1 of rounding per line', () => {
-    expect(checkOrder({ ...order, discount: 500, total: 12681 }).needsReview).toBe(false)
+    const r = checkOrder({ ...order, discount: 500, total: 12681 })
+    expect(r.needsReview).toBe(false)
+    expect(r.charges.at(-1)).toMatchObject({ kind: 'discount', amount: -500 })
   })
 
   it('flags another currency and a bad date', () => {

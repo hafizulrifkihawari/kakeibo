@@ -1,4 +1,5 @@
 import { findKnownStore } from './categorizer'
+import { chargeKindOf, chargeTotal, type ExpenseCharge } from './charges'
 
 export interface ReceiptItem {
   name: string
@@ -16,6 +17,8 @@ export interface ParsedReceipt {
   date: string | null
   total: number | null
   items: ReceiptItem[]
+  /** Tax added on top of the prices (外税), shipping, and fees. */
+  charges: ExpenseCharge[]
 }
 
 // Lines that carry a total, best first.
@@ -363,6 +366,38 @@ function parseStore(lines: string[], text: string): string | null {
   return branch ?? brand ?? null
 }
 
+// "08外税 ¥270", "外税額 8% ¥95": tax added on top of the prices, for one rate.
+const TAX_RATE = /外税額?\s*(\d{1,2})\s*%|(\d{1,2})\s*%?\s*外税(?!計|合計)/
+const TAX_SUM = /外税(計|合計)/
+// "消費税 ¥95" can also be tax that the prices include, so it needs the sum check.
+const TAX_PLAIN = /^消費税(等|額)?\s*(計|合計)?(?![\p{L}])/u
+// A tax base (対象), tax that the prices include (内税), or a repeat in brackets.
+const TAX_SKIP = /対象|内税|内消|^\(/
+
+/** Consumption tax added on top of the item prices: one charge for each rate, else the tax total. */
+function parseTax(lines: string[], itemSum: number, total: number | null): ExpenseCharge[] {
+  const byRate = new Map<number, number>()
+  let sum: number | null = null
+  let plain: number | null = null
+  for (const line of lines) {
+    if (TAX_SKIP.test(line)) continue
+    const a = lineAmount(line)
+    if (!a || a <= 0 || (total !== null && a >= total)) continue
+    const rate = line.match(TAX_RATE)
+    if (rate) {
+      const r = Number(rate[1] ?? rate[2])
+      if (r >= 1 && r <= 30 && !byRate.has(r)) byRate.set(r, a)
+    } else if (TAX_SUM.test(line)) sum ??= a
+    else if (TAX_PLAIN.test(line)) plain ??= a
+  }
+  if (byRate.size) return [...byRate].map(([r, a]) => ({ kind: 'tax', name: `消費税 ${r}%`, amount: a }))
+  if (sum !== null) return [{ kind: 'tax', name: '消費税', amount: sum }]
+  if (plain !== null && total !== null && Math.abs(itemSum + plain - total) <= 1) {
+    return [{ kind: 'tax', name: '消費税', amount: plain }]
+  }
+  return []
+}
+
 export function parseReceipt(raw: string, today = new Date()): ParsedReceipt {
   const text = normalize(raw)
   const lines = text.split('\n')
@@ -374,7 +409,15 @@ export function parseReceipt(raw: string, today = new Date()): ParsedReceipt {
   // Items start after the last header line that has the date, or at the top.
   const dateLine = lines.findIndex((l) => parseDate(l, today) !== null)
   const start = dateLine >= 0 && dateLine < lines.length / 2 ? dateLine + 1 : 0
-  const items = parseItems(lines, start)
+  const items: ReceiptItem[] = []
+  const charges: ExpenseCharge[] = []
+  for (const item of parseItems(lines, start)) {
+    const kind = chargeKindOf(item.name)
+    if (kind) charges.push({ kind, name: item.name, amount: item.price })
+    else items.push(item)
+  }
+  const sum = items.reduce((s, i) => s + i.price, 0) + chargeTotal(charges)
+  charges.push(...parseTax(lines, sum, total))
 
-  return { store, date, total, items }
+  return { store, date, total, items, charges }
 }

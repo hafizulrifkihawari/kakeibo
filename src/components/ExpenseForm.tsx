@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { CATEGORY_BY_ID, type CategoryId } from '../../shared/categories'
 import type { CategoryRule } from '../../shared/categorizer'
+import { CHARGE_BY_ID, CHARGE_KINDS, type ChargeKind, type ExpenseCharge } from '../../shared/charges'
 import type { Expense } from '../../shared/types'
 import { glossKey, hasKanji, type Gloss } from '../../shared/gloss'
 import {
@@ -40,6 +41,13 @@ interface ItemDraft {
   kindManual?: boolean
 }
 
+interface ChargeDraft {
+  key: number
+  kind: ChargeKind
+  name: string
+  amount: string
+}
+
 let nextKey = 1
 
 function toDraft(items: Expense['items']): ItemDraft[] {
@@ -53,6 +61,16 @@ function toDraft(items: Expense['items']): ItemDraft[] {
     size: i.size === 0 ? '' : i.size ? `${i.size}${i.sizeUnit}` : undefined,
     kind: i.kind,
   }))
+}
+
+function toChargeDraft(charges: Expense['charges']): ChargeDraft[] {
+  return (charges ?? []).map((c) => ({ key: nextKey++, kind: c.kind, name: c.name, amount: String(c.amount) }))
+}
+
+/** A discount always lowers the total, so its amount is negative whatever the user types. */
+function chargeAmount(c: ChargeDraft): number {
+  const n = toInt(c.amount)
+  return c.kind === 'discount' ? -Math.abs(n) : n
 }
 
 /** A sorted, unique list that updates 600 ms after typing stops. */
@@ -320,6 +338,7 @@ export function ExpenseForm({
   const [categoryId, setCategoryId] = useState<CategoryId>(initial.categoryId)
   const [note, setNote] = useState(initial.note)
   const [items, setItems] = useState<ItemDraft[]>(() => toDraft(initial.items))
+  const [charges, setCharges] = useState<ChargeDraft[]>(() => toChargeDraft(initial.charges))
   const [error, setError] = useState('')
 
   const save = useMutation<unknown, Error, SaveVars>({
@@ -366,11 +385,23 @@ export function ExpenseForm({
     i.kind ?? prices.data?.[productKey(productOf(i))]?.kind ?? gloss.data?.[glossKey(i.name)]?.kind
 
   const itemTotal = items.reduce((s, i) => s + toInt(i.price), 0)
+  const chargeSum = charges.reduce((s, c) => s + chargeAmount(c), 0)
+  const lineTotal = itemTotal + chargeSum
   const amountN = toInt(amount)
-  // Item prices are often before tax (外税): a gap of up to 10% is consumption tax, not an error.
-  const gap = amountN - itemTotal
-  const isTax = items.length > 0 && gap > 0 && gap <= Math.ceil(itemTotal * 0.1) + 1
-  const mismatch = items.length > 0 && gap !== 0 && !isTax
+  const hasLines = items.length > 0 || charges.length > 0
+  // Item prices are often before tax (外税): with no tax line yet, a gap of up to 10% is likely the tax.
+  const gap = amountN - lineTotal
+  const likelyTax =
+    items.length > 0 && !charges.some((c) => c.kind === 'tax') && gap > 0 && gap <= Math.ceil(itemTotal * 0.1) + 1
+  const mismatch = hasLines && gap !== 0
+
+  function updateCharge(key: number, patch: Partial<ChargeDraft>) {
+    setCharges((list) => list.map((c) => (c.key === key ? { ...c, ...patch } : c)))
+  }
+
+  function addCharge(kind: ChargeKind, value = '') {
+    setCharges((list) => [...list, { key: nextKey++, kind, name: kind === 'tax' ? CHARGE_BY_ID.tax.ja : '', amount: value }])
+  }
 
   function updateItem(key: number, patch: Partial<ItemDraft>) {
     setItems((list) => list.map((i) => (i.key === key ? { ...i, ...patch } : i)))
@@ -400,6 +431,9 @@ export function ExpenseForm({
           kindManual: i.kindManual || undefined,
         }))
         .filter((i) => i.name),
+      charges: charges
+        .map((c): ExpenseCharge => ({ kind: c.kind, name: c.name.trim(), amount: chargeAmount(c) }))
+        .filter((c) => c.amount !== 0),
       updatedAt: Date.now(),
     }
     // Fire and forget: offline, the save waits in the queue and the UI moves on.
@@ -455,7 +489,7 @@ export function ExpenseForm({
         <CategoryChips value={categoryId} onChange={setCategoryId} />
       </div>
 
-      <details className="card collapse" open={items.length > 0 && mismatch}>
+      <details className="card collapse" open={items.length > 0 && mismatch && !likelyTax}>
         <summary>
           <span>
             Items <span className="muted small">({items.length})</span>
@@ -521,23 +555,97 @@ export function ExpenseForm({
           >
             + Add item
           </button>
-          {isTax && (
-            <div className="muted small">
-              Total includes <b className="num">{yen(gap)}</b> consumption tax (消費税).
+        </div>
+      </details>
+
+      <details className="card collapse" open={charges.length > 0 || likelyTax}>
+        <summary>
+          <span>
+            Other costs <span className="muted small">(tax, shipping, fees)</span>
+          </span>
+          {charges.length > 0 && <span className="num muted small">{yen(chargeSum)}</span>}
+        </summary>
+        <div className="items" style={{ marginTop: 8 }}>
+          {charges.map((c) => (
+            <div key={c.key} className="item-row">
+              <input
+                className="input"
+                aria-label="Cost name"
+                placeholder={CHARGE_BY_ID[c.kind].ja}
+                value={c.name}
+                onChange={(e) => updateCharge(c.key, { name: e.target.value })}
+              />
+              <input
+                className="input num"
+                aria-label="Amount"
+                inputMode="numeric"
+                value={c.amount}
+                onChange={(e) => updateCharge(c.key, { amount: e.target.value })}
+              />
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label={`Remove ${c.name || CHARGE_BY_ID[c.kind].en}`}
+                onClick={() => setCharges((l) => l.filter((x) => x.key !== c.key))}
+              >
+                ✕
+              </button>
+              <div className="product-line">
+                <select
+                  className="kind-select"
+                  aria-label="Cost type"
+                  value={c.kind}
+                  onChange={(e) => updateCharge(c.key, { kind: e.target.value as ChargeKind })}
+                >
+                  {CHARGE_KINDS.map((k) => (
+                    <option key={k.id} value={k.id}>
+                      {k.icon} {k.en}
+                    </option>
+                  ))}
+                </select>
+                {c.kind === 'discount' && toInt(c.amount) > 0 && (
+                  <span className="price-down num">−{yen(toInt(c.amount))}</span>
+                )}
+              </div>
             </div>
-          )}
-          {mismatch && (
+          ))}
+          <button type="button" className="btn btn-ghost" onClick={() => addCharge(likelyTax ? 'tax' : 'other')}>
+            + Add cost
+          </button>
+        </div>
+      </details>
+
+      {hasLines && (
+        <div className="card stack">
+          <div className="spread small">
+            <span className="muted">
+              Items {yen(itemTotal)}
+              {charges.length > 0 && <> + other {yen(chargeSum)}</>}
+            </span>
+            <b className="num">{yen(lineTotal)}</b>
+          </div>
+          {likelyTax && (
             <div className="warn spread">
               <span>
-                Items add up to <b className="num">{yen(itemTotal)}</b>, not {yen(amountN)}.
+                The total is <b className="num">{yen(gap)}</b> more than the items. Is it consumption tax (消費税)?
               </span>
-              <button type="button" className="btn btn-ghost" onClick={() => setAmount(String(itemTotal))}>
+              <button type="button" className="btn btn-ghost" onClick={() => addCharge('tax', String(gap))}>
+                Add as tax
+              </button>
+            </div>
+          )}
+          {mismatch && !likelyTax && (
+            <div className="warn spread">
+              <span>
+                The lines add up to <b className="num">{yen(lineTotal)}</b>, not {yen(amountN)}.
+              </span>
+              <button type="button" className="btn btn-ghost" onClick={() => setAmount(String(lineTotal))}>
                 Use
               </button>
             </div>
           )}
         </div>
-      </details>
+      )}
 
       <div className="card">
         <label className="field">

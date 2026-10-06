@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import type { CategoryId } from '../../../shared/categories'
 import { categorize } from '../../../shared/categorizer'
+import { chargeTotal } from '../../../shared/charges'
 import { readEmail, type EmailText } from '../../../shared/email-text'
 import { parseReceipt } from '../../../shared/receipt-parser'
 import type { Expense, OcrEngine } from '../../../shared/types'
@@ -52,6 +53,7 @@ function blank(): Expense {
     ocrEngine: 'manual',
     rawText: '',
     items: [],
+    charges: [],
     updatedAt: Date.now(),
   }
 }
@@ -79,12 +81,13 @@ function AddPage() {
       expense: {
         ...blank(),
         date: r.date ?? isoDate(),
-        amount: r.total ?? r.items.reduce((s, i) => s + i.price, 0),
+        amount: r.total ?? r.items.reduce((s, i) => s + i.price, 0) + chargeTotal(r.charges),
         store: r.store ?? '',
         categoryId: suggested,
         ocrEngine: engine,
         rawText: text,
         items: r.items,
+        charges: r.charges,
       },
       suggested,
       note,
@@ -118,6 +121,7 @@ function AddPage() {
           ocrEngine: 'email',
           rawText: mail.text,
           items: order.items,
+          charges: order.charges,
         },
         suggested,
         note: order.needsReview ? '⚠️ The items do not add up to the total. Check them.' : undefined,
