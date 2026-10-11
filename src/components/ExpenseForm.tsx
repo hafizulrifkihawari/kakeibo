@@ -190,7 +190,11 @@ function ProductLine({
           placeholder="Product name (empty: not a product)"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
+          onBlur={(e) => {
+            // The window lost focus (e.g. the Android keyboard picker opened), not the input.
+            if (document.activeElement === e.currentTarget) return
+            commit()
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()

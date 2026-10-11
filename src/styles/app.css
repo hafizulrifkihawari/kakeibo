@@ -391,6 +391,21 @@ textarea.input {
   border-bottom: 0;
 }
 
+/* An income row is a button that opens the row in the form. */
+.income-row {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.income-row[aria-pressed='true'] {
+  background: var(--accent-soft);
+}
+
 .list-row .main {
   flex: 1;
   min-width: 0;

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { addMonths, isoDate, isoMonth, yen } from '../../client/format'
-import { monthQuery } from '../../client/queries'
+import { incomeQuery, monthQuery } from '../../client/queries'
 import { Empty, ExpenseRow } from '../../components/bits'
 import { WeekBars } from '../../components/charts'
 
@@ -11,6 +11,7 @@ function Home() {
   const ym = isoMonth()
   const month = useQuery(monthQuery(ym))
   // The 7-day chart can reach into last month during the first week.
+  const income = useQuery(incomeQuery(ym))
   const prev = useQuery({ ...monthQuery(addMonths(ym, -1)), enabled: new Date().getDate() < 7 })
 
   const list = month.data ?? []
@@ -18,6 +19,7 @@ function Home() {
   const todayTotal = list.filter((e) => e.date === today).reduce((s, e) => s + e.amount, 0)
   const monthTotal = list.reduce((s, e) => s + e.amount, 0)
   const avg = Math.round(monthTotal / new Date().getDate())
+  const incomeTotal = (income.data ?? []).reduce((s, i) => s + i.amount, 0)
   const recent = [...list].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5)
 
   return (
@@ -36,6 +38,27 @@ function Home() {
           </div>
         </div>
       </section>
+
+      <Link to="/income/$ym" params={{ ym }} className="card" style={{ display: 'block', color: 'inherit' }}>
+        <div className="spread" style={{ marginBottom: 12 }}>
+          <span style={{ fontWeight: 500 }}>Income</span>
+          <span className="small" style={{ color: 'var(--accent)' }}>
+            {incomeTotal ? 'Details →' : 'Add →'}
+          </span>
+        </div>
+        <div className="stat-grid">
+          <div className="stat">
+            <div className="label">This month</div>
+            <div className="value num">{yen(incomeTotal)}</div>
+          </div>
+          <div className="stat">
+            <div className="label">Left</div>
+            <div className="value num" style={incomeTotal - monthTotal < 0 ? { color: 'var(--danger)' } : undefined}>
+              {yen(incomeTotal - monthTotal)}
+            </div>
+          </div>
+        </div>
+      </Link>
 
       <section className="card">
         <div className="spread" style={{ marginBottom: 12 }}>

@@ -3,18 +3,22 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { del, get, set } from 'idb-keyval'
 import {
   deleteExpense,
+  deleteIncome,
   getMe,
   getPriceStats,
   getProduct,
   glossItems,
   listExpenses,
+  listIncome,
   listProducts,
   listRules,
   saveExpense,
+  saveIncome,
   saveRule,
 } from '../server/fns'
 import type { CategoryRule } from '../../shared/categorizer'
 import type { Expense, User } from '../../shared/types'
+import type { Income } from '../../shared/income'
 import { monthRange } from './format'
 
 const ME_KEY = 'jp-expense:me'
@@ -22,6 +26,7 @@ const ME_KEY = 'jp-expense:me'
 export const keys = {
   me: ['me'] as const,
   month: (ym: string) => ['expenses', ym] as const,
+  income: (ym: string) => ['income', ym] as const,
   rules: ['rules'] as const,
   products: ['products'] as const,
   product: (id: number) => ['products', id] as const,
@@ -32,6 +37,13 @@ export const monthQuery = (ym: string) =>
   queryOptions({
     queryKey: keys.month(ym),
     queryFn: () => listExpenses({ data: monthRange(ym) }),
+    staleTime: 30_000,
+  })
+
+export const incomeQuery = (ym: string) =>
+  queryOptions({
+    queryKey: keys.income(ym),
+    queryFn: () => listIncome({ data: monthRange(ym) }),
     staleTime: 30_000,
   })
 
@@ -108,7 +120,13 @@ export interface DeleteVars {
   date: string
 }
 
-function upsert(list: Expense[] | undefined, e: Expense): Expense[] {
+export interface SaveIncomeVars {
+  income: Income
+  /** The date before this edit, when it moved to another month. */
+  prevDate?: string
+}
+
+function upsert<T extends { id: string; date: string; updatedAt: number }>(list: T[] | undefined, e: T): T[] {
   const rest = (list ?? []).filter((x) => x.id !== e.id)
   return [e, ...rest].sort((a, b) => (a.date === b.date ? b.updatedAt - a.updatedAt : a.date < b.date ? 1 : -1))
 }
@@ -169,6 +187,35 @@ export function createQueryClient(): QueryClient {
       qc.invalidateQueries({ queryKey: keys.month(date.slice(0, 7)) })
       qc.invalidateQueries({ queryKey: keys.products })
       qc.invalidateQueries({ queryKey: keys.prices })
+    },
+  })
+
+  qc.setMutationDefaults(['saveIncome'], {
+    mutationFn: ({ income }: SaveIncomeVars) => saveIncome({ data: income }),
+    onMutate: async ({ income, prevDate }: SaveIncomeVars) => {
+      const ym = income.date.slice(0, 7)
+      await qc.cancelQueries({ queryKey: keys.income(ym) })
+      if (prevDate && prevDate.slice(0, 7) !== ym) {
+        qc.setQueryData<Income[]>(keys.income(prevDate.slice(0, 7)), (l) => l?.filter((x) => x.id !== income.id))
+      }
+      qc.setQueryData<Income[]>(keys.income(ym), (l) => upsert(l, income))
+    },
+    onSettled: (_d, _e, { income }: SaveIncomeVars) => {
+      if (qc.isMutating({ mutationKey: ['saveIncome'] }) <= 1) {
+        qc.invalidateQueries({ queryKey: keys.income(income.date.slice(0, 7)) })
+      }
+    },
+  })
+
+  qc.setMutationDefaults(['deleteIncome'], {
+    mutationFn: ({ id }: DeleteVars) => deleteIncome({ data: { id } }),
+    onMutate: async ({ id, date }: DeleteVars) => {
+      const key = keys.income(date.slice(0, 7))
+      await qc.cancelQueries({ queryKey: key })
+      qc.setQueryData<Income[]>(key, (l) => l?.filter((x) => x.id !== id))
+    },
+    onSettled: (_d, _e, { date }: DeleteVars) => {
+      qc.invalidateQueries({ queryKey: keys.income(date.slice(0, 7)) })
     },
   })
 

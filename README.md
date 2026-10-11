@@ -2,6 +2,8 @@
 
 A mobile web app (PWA) that reads Japanese receipts and tracks spending by day and month.
 
+See [FEATURES.md](FEATURES.md) for the full list of features.
+
 - **Stack:** TanStack Start (React, Router, Query) on Cloudflare Workers, with D1 (SQLite).
 - **OCR:** Google Cloud Vision first. The app uses PP-OCRv5 (PaddleOCR) in the browser when the monthly Vision limit is reached, when Vision fails, or when the phone is offline. You can also paste text copied from Google Lens.
 - **Auth:** email + password. Passwords are PBKDF2-SHA256 hashes (100,000 iterations, random salt). Session tokens are stored as SHA-256 hashes.

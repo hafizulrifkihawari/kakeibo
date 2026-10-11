@@ -4,6 +4,7 @@ import { isCategoryId, type CategoryId } from '../../shared/categories'
 import type { CategoryRule } from '../../shared/categorizer'
 import { isChargeKind, type ExpenseCharge } from '../../shared/charges'
 import type { Expense, OcrEngine, User } from '../../shared/types'
+import { isIncomeSource, type Income } from '../../shared/income'
 import {
   createSession,
   currentSessionHash,
@@ -470,6 +471,86 @@ export const deleteExpense = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const user = await requireUser()
     await env.DB.prepare('UPDATE expenses SET deleted_at = ? WHERE id = ? AND user_id = ?')
+      .bind(Date.now(), data.id, user.id)
+      .run()
+    return { ok: true }
+  })
+
+// ── Income ──────────────────────────────────────────────────────────────
+
+export const listIncome = createServerFn({ method: 'GET' })
+  .validator((input: unknown) => {
+    const o = (input ?? {}) as Record<string, unknown>
+    const from = str(o.from, 10)
+    const to = str(o.to, 10)
+    if (!DATE_RE.test(from) || !DATE_RE.test(to)) throw new Error('Bad date range.')
+    return { from, to }
+  })
+  .handler(async ({ data }): Promise<Income[]> => {
+    const user = await requireUser()
+    const { results } = await env.DB.prepare(
+      `SELECT id, date, amount, source, note, updated_at FROM incomes
+       WHERE user_id = ? AND deleted_at IS NULL AND date BETWEEN ? AND ?
+       ORDER BY date DESC, updated_at DESC`,
+    )
+      .bind(user.id, data.from, data.to)
+      .all<{ id: string; date: string; amount: number; source: string; note: string | null; updated_at: number }>()
+    return results.map((r) => ({
+      id: r.id,
+      date: r.date,
+      amount: r.amount,
+      source: isIncomeSource(r.source) ? r.source : 'other',
+      note: r.note ?? '',
+      updatedAt: r.updated_at,
+    }))
+  })
+
+export const saveIncome = createServerFn({ method: 'POST' })
+  .validator((input: unknown): Income => {
+    const o = (input ?? {}) as Record<string, unknown>
+    const id = str(o.id, 64)
+    const date = str(o.date, 10)
+    const amount = Number(o.amount)
+    if (!ID_RE.test(id)) throw new Error('Bad id.')
+    if (!DATE_RE.test(date)) throw new Error('Enter a valid date.')
+    if (!Number.isInteger(amount) || amount <= 0 || amount > 100_000_000) throw new Error('Enter a valid amount.')
+    return {
+      id,
+      date,
+      amount,
+      source: isIncomeSource(o.source) ? o.source : 'other',
+      note: str(o.note, 500).trim(),
+      updatedAt: Number.isFinite(Number(o.updatedAt)) ? Number(o.updatedAt) : Date.now(),
+    }
+  })
+  .handler(async ({ data: i }) => {
+    const user = await requireUser()
+    // Same rules as saveExpense: an older offline edit never overwrites a newer one.
+    const saved = await env.DB.prepare(
+      `INSERT INTO incomes (id, user_id, date, amount, source, note, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         date = excluded.date, amount = excluded.amount, source = excluded.source,
+         note = excluded.note, updated_at = excluded.updated_at
+       WHERE incomes.user_id = excluded.user_id
+         AND excluded.updated_at >= incomes.updated_at
+         AND incomes.deleted_at IS NULL
+       RETURNING id`,
+    )
+      .bind(i.id, user.id, i.date, i.amount, i.source, i.note, i.updatedAt)
+      .first<{ id: string }>()
+    return { ok: true, stale: !saved }
+  })
+
+export const deleteIncome = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => {
+    const id = str((input as Record<string, unknown>)?.id, 64)
+    if (!ID_RE.test(id)) throw new Error('Bad id.')
+    return { id }
+  })
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    await env.DB.prepare('UPDATE incomes SET deleted_at = ? WHERE id = ? AND user_id = ?')
       .bind(Date.now(), data.id, user.id)
       .run()
     return { ok: true }

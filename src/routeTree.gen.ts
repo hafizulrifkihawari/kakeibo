@@ -21,6 +21,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
 import { Route as AppExpenseIdRouteImport } from './routes/_app/expense.$id'
+import { Route as AppIncomeYmRouteImport } from './routes/_app/income.$ym'
 import { Route as AppMonthYmRouteImport } from './routes/_app/month.$ym'
 import { Route as AppProductIdRouteImport } from './routes/_app/product.$id'
 
@@ -83,6 +84,11 @@ const AppExpenseIdRoute = AppExpenseIdRouteImport.update({
   path: '/expense/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIncomeYmRoute = AppIncomeYmRouteImport.update({
+  id: '/income/$ym',
+  path: '/income/$ym',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMonthYmRoute = AppMonthYmRouteImport.update({
   id: '/month/$ym',
   path: '/month/$ym',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/api/telegram': typeof ApiTelegramRoute
   '/day/$date': typeof AppDayDateRoute
   '/expense/$id': typeof AppExpenseIdRoute
+  '/income/$ym': typeof AppIncomeYmRoute
   '/month/$ym': typeof AppMonthYmRoute
   '/product/$id': typeof AppProductIdRoute
 }
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/day/$date': typeof AppDayDateRoute
   '/expense/$id': typeof AppExpenseIdRoute
+  '/income/$ym': typeof AppIncomeYmRoute
   '/month/$ym': typeof AppMonthYmRoute
   '/product/$id': typeof AppProductIdRoute
 }
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/day/$date': typeof AppDayDateRoute
   '/_app/expense/$id': typeof AppExpenseIdRoute
+  '/_app/income/$ym': typeof AppIncomeYmRoute
   '/_app/month/$ym': typeof AppMonthYmRoute
   '/_app/product/$id': typeof AppProductIdRoute
 }
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/api/telegram'
     | '/day/$date'
     | '/expense/$id'
+    | '/income/$ym'
     | '/month/$ym'
     | '/product/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/'
     | '/day/$date'
     | '/expense/$id'
+    | '/income/$ym'
     | '/month/$ym'
     | '/product/$id'
   id:
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/day/$date'
     | '/_app/expense/$id'
+    | '/_app/income/$ym'
     | '/_app/month/$ym'
     | '/_app/product/$id'
   fileRoutesById: FileRoutesById
@@ -285,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExpenseIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/income/$ym': {
+      id: '/_app/income/$ym'
+      path: '/income/$ym'
+      fullPath: '/income/$ym'
+      preLoaderRoute: typeof AppIncomeYmRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/month/$ym': {
       id: '/_app/month/$ym'
       path: '/month/$ym'
@@ -309,6 +328,7 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppDayDateRoute: typeof AppDayDateRoute
   AppExpenseIdRoute: typeof AppExpenseIdRoute
+  AppIncomeYmRoute: typeof AppIncomeYmRoute
   AppMonthYmRoute: typeof AppMonthYmRoute
   AppProductIdRoute: typeof AppProductIdRoute
 }
@@ -320,6 +340,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppDayDateRoute: AppDayDateRoute,
   AppExpenseIdRoute: AppExpenseIdRoute,
+  AppIncomeYmRoute: AppIncomeYmRoute,
   AppMonthYmRoute: AppMonthYmRoute,
   AppProductIdRoute: AppProductIdRoute,
 }

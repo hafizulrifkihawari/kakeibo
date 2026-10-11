@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef } from 'react'
 import { setPendingFile } from '../client/capture-store'
+import { isoMonth } from '../client/format'
 
 export function AddSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
@@ -59,6 +60,16 @@ export function AddSheet({ open, onClose }: { open: boolean; onClose: () => void
                 Manual
               </button>
             </div>
+            <button
+              className="btn btn-block"
+              style={{ marginTop: 10 }}
+              onClick={() => {
+                onClose()
+                navigate({ to: '/income/$ym', params: { ym: isoMonth() } })
+              }}
+            >
+              <span aria-hidden>💴</span> Add income
+            </button>
           </div>
         </>
       )}
