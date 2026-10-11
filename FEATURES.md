@@ -9,7 +9,7 @@ What Kakeibo can do now. Update this file when a change adds, removes, or change
 | Add | Paste text | Read text that you copied, for example from Google Lens. |
 | Add | Order email | Open or share an `.eml` file, or paste email text. The app reads the order and checks the total. |
 | Add | Manual entry | Type an expense yourself. |
-| Add | Scan collection | Opt-in for each user, off by default. After you save a scanned receipt, the app keeps the photo and its first reading until your computer downloads them. Use them to test and train a local receipt model (receipt-parser-jp). |
+| Add | Scan collection | Opt-in for each user, off by default. After you save a scanned receipt, the app keeps the photo and its first reading until your computer downloads them. Use them to test and train a local receipt model (kakeibo-lab). |
 | Add | Offline reading | Receipts are read on the phone when Google Vision is over its limit, fails, or there is no network. |
 | Expense form | Items | Edit each line. Each item shows its furigana reading and an English translation. |
 | Expense form | Products | Link an item to a product, with quantity, unit (pieces, g, ml), pack size, and kind. |

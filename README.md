@@ -70,7 +70,7 @@ The script prints the temporary password and logs out every device of that user.
 
 ## Collect scans for a local model
 
-The app can keep the photo of each receipt that you scan. The companion tool [receipt-parser-jp](https://github.com/hafizulrifkihawari/receipt-parser-jp) downloads the photos to your computer, with the expense you saved. There you review them and use them to test and improve a receipt model that runs on your computer (Qwen 2.5 VL on Ollama).
+The app can keep the photo of each receipt that you scan. The companion tool [kakeibo-lab](https://github.com/hafizulrifkihawari/kakeibo-lab) downloads the photos to your computer, with the expense you saved. There you review them and use them to test and improve a receipt model that runs on your computer (Qwen 2.5 VL on Ollama).
 
 How it works:
 
