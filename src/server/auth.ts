@@ -33,19 +33,22 @@ export interface SessionUser {
   id: number
   email: string
   telegramLinked: boolean
+  collectScans: boolean
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   const token = getCookie(SESSION_COOKIE)
   if (!token) return null
   const row = await env.DB.prepare(
-    `SELECT u.id, u.email, u.telegram_chat_id IS NOT NULL AS linked
+    `SELECT u.id, u.email, u.telegram_chat_id IS NOT NULL AS linked, u.collect_scans
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.expires_at > ?`,
   )
     .bind(await sha256(token), Date.now())
-    .first<{ id: number; email: string; linked: number }>()
-  return row ? { id: row.id, email: row.email, telegramLinked: !!row.linked } : null
+    .first<{ id: number; email: string; linked: number; collect_scans: number }>()
+  return row
+    ? { id: row.id, email: row.email, telegramLinked: !!row.linked, collectScans: !!row.collect_scans }
+    : null
 }
 
 export async function requireUser(): Promise<SessionUser> {

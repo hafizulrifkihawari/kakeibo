@@ -72,7 +72,7 @@ export const register = createServerFn({ method: 'POST' })
       .first<{ id: number }>()
     if (!row) throw new Error('An account with this email already exists.')
     await createSession(row.id)
-    return { id: row.id, email: data.email, telegramLinked: false }
+    return { id: row.id, email: data.email, telegramLinked: false, collectScans: false }
   })
 
 export const login = createServerFn({ method: 'POST' })
@@ -82,7 +82,7 @@ export const login = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }): Promise<User> => {
     const user = await env.DB.prepare(
-      `SELECT id, email, password_hash, salt, iterations, telegram_chat_id
+      `SELECT id, email, password_hash, salt, iterations, telegram_chat_id, collect_scans
        FROM users WHERE email = ?`,
     )
       .bind(data.email)
@@ -93,7 +93,12 @@ export const login = createServerFn({ method: 'POST' })
       : (await hashPassword(data.password), false)
     if (!user || !ok) throw new Error('The email or password is not correct.')
     await createSession(user.id)
-    return { id: user.id, email: user.email, telegramLinked: user.telegram_chat_id !== null }
+    return {
+      id: user.id,
+      email: user.email,
+      telegramLinked: user.telegram_chat_id !== null,
+      collectScans: !!user.collect_scans,
+    }
   })
 
 interface UserRow {
@@ -103,6 +108,7 @@ interface UserRow {
   salt: string
   iterations: number
   telegram_chat_id: number | null
+  collect_scans: number
 }
 
 async function setPassword(userId: number, password: string) {
@@ -643,6 +649,40 @@ export const getVisionUsage = createServerFn({ method: 'GET' }).handler(async ()
   await requireUser()
   return visionUsage()
 })
+
+// ── Scan collection for a local model ───────────────────────────────────
+
+// A D1 row holds at most 2,000,000 bytes: the photo and the draft must fit together.
+const SCAN_IMAGE_MAX = 1_800_000
+const SCAN_DRAFT_MAX = 100_000
+
+/** Keeps a scanned photo and its first reading, only when the admin turned scan collection on for this user. */
+export const saveScan = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => {
+    const o = (input ?? {}) as Record<string, unknown>
+    const expenseId = str(o.expenseId, 64)
+    if (!/^[0-9a-f-]{36}$/i.test(expenseId)) throw new Error('Bad id.')
+    const { image, draft } = o
+    // Check the length, do not cut: a cut image or draft is worse than none.
+    if (typeof image !== 'string' || image.length > SCAN_IMAGE_MAX || !/^[A-Za-z0-9+/=]+$/.test(image)) {
+      throw new Error('Bad image.')
+    }
+    if (typeof draft !== 'string' || draft.length > SCAN_DRAFT_MAX) throw new Error('Bad draft.')
+    JSON.parse(draft)
+    const engine = ENGINES.includes(o.engine as OcrEngine) ? (o.engine as OcrEngine) : 'manual'
+    return { expenseId, image, draft, engine }
+  })
+  .handler(async ({ data }) => {
+    const user = await requireUser()
+    // The image stays base64: decoding it would use CPU time for nothing.
+    const res = await env.DB.prepare(
+      `INSERT OR IGNORE INTO receipt_scans (expense_id, user_id, image, draft, engine)
+       SELECT ?, id, ?, ?, ? FROM users WHERE id = ? AND collect_scans = 1`,
+    )
+      .bind(data.expenseId, data.image, data.draft, data.engine, user.id)
+      .run()
+    return { stored: res.meta.changes > 0 }
+  })
 
 // ── Item furigana and translation ───────────────────────────────────────
 

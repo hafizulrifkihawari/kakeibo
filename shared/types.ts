@@ -44,4 +44,6 @@ export interface User {
   id: number
   email: string
   telegramLinked: boolean
+  /** True when the admin turned on scan collection: scanned photos are kept for a local model. */
+  collectScans: boolean
 }

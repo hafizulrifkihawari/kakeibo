@@ -12,7 +12,7 @@ import { isoDate, uuid } from '../../client/format'
 import { prepareImage } from '../../client/image'
 import { readReceipt, type OcrStatus } from '../../client/ocr/read-receipt'
 import { rulesQuery } from '../../client/queries'
-import { extractEmail } from '../../server/fns'
+import { extractEmail, saveScan } from '../../server/fns'
 import { ExpenseForm } from '../../components/ExpenseForm'
 
 type Mode = 'photo' | 'paste' | 'email' | 'manual'
@@ -61,6 +61,7 @@ function blank(): Expense {
 function AddPage() {
   const { mode, shared } = Route.useSearch()
   const navigate = useNavigate()
+  const { me } = Route.useRouteContext()
   const rules = useQuery(rulesQuery)
   const [draft, setDraft] = useState<{ expense: Expense; suggested?: CategoryId; note?: string } | null>(
     mode === 'manual' ? { expense: blank() } : null,
@@ -73,25 +74,25 @@ function AddPage() {
   const pickRef = useRef<HTMLInputElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
   const started = useRef(false)
+  /** The photo and the first reading of the last scan, for scan collection (see saveScan). */
+  const scanned = useRef<{ expenseId: string; image: string; engine: OcrEngine; draft: string } | null>(null)
 
   function fromText(text: string, engine: OcrEngine, note?: string) {
     const r = parseReceipt(text)
     const suggested = categorize({ store: r.store ?? '', text, items: r.items }, rules.data ?? [])
-    setDraft({
-      expense: {
-        ...blank(),
-        date: r.date ?? isoDate(),
-        amount: r.total ?? r.items.reduce((s, i) => s + i.price, 0) + chargeTotal(r.charges),
-        store: r.store ?? '',
-        categoryId: suggested,
-        ocrEngine: engine,
-        rawText: text,
-        items: r.items,
-        charges: r.charges,
-      },
-      suggested,
-      note,
-    })
+    const expense: Expense = {
+      ...blank(),
+      date: r.date ?? isoDate(),
+      amount: r.total ?? r.items.reduce((s, i) => s + i.price, 0) + chargeTotal(r.charges),
+      store: r.store ?? '',
+      categoryId: suggested,
+      ocrEngine: engine,
+      rawText: text,
+      items: r.items,
+      charges: r.charges,
+    }
+    setDraft({ expense, suggested, note })
+    return { expenseId: expense.id, draft: JSON.stringify({ ...r, categoryId: suggested }) }
   }
 
   async function fromEmail(mail: EmailText) {
@@ -142,12 +143,14 @@ function AddPage() {
   async function scan(file: File) {
     setError('')
     setDraft(null)
+    scanned.current = null
     try {
       const img = await prepareImage(file)
       setPreview(img.previewUrl)
       const out = await readReceipt(img, setStatus)
       if (!out.text.trim()) throw new Error('No text found. Try again with the whole receipt in the photo and good light.')
-      fromText(out.text, out.engine, out.fallbackReason ? FALLBACK_LABEL[out.fallbackReason] : undefined)
+      const read = fromText(out.text, out.engine, out.fallbackReason ? FALLBACK_LABEL[out.fallbackReason] : undefined)
+      scanned.current = { ...read, image: img.base64, engine: out.engine }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not read the receipt.')
     } finally {
@@ -182,8 +185,14 @@ function AddPage() {
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
 
-  const done = (saved: Expense | null) =>
+  const done = (saved: Expense | null) => {
+    const scan = scanned.current
+    if (saved && me.collectScans && scan?.expenseId === saved.id) {
+      // Best effort: when it fails (for example offline), this receipt is not collected.
+      saveScan({ data: scan }).catch(() => {})
+    }
     navigate({ to: '/day/$date', params: { date: saved?.date ?? isoDate() } })
+  }
 
   return (
     <main className="page stack">

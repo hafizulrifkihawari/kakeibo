@@ -12,6 +12,7 @@ See [FEATURES.md](FEATURES.md) for the full list of features.
 - **Other costs:** the form has an "Other costs" section for consumption tax, shipping, fees, and discounts. These lines are not products, so they do not go into price history. The scan reads tax added on top of the prices (外税, "08外税 ¥270"), one line for each rate, and skips tax that the prices include (内税). The form adds the items and the other costs, and compares the sum with the total. If the total is up to 10% more than the items and there is no tax line, the form offers "Add as tax".
 - **Order emails:** Add → Email opens an `.eml` file (Proton Mail: ⋯ → Export; Gmail: ⋮ → Download message). Add → Paste text → "Read as order email" reads copied email text. On Android, you can also share an `.eml` file to the installed app. Workers AI reads the store, date, items, shipping, and total. The app checks that the items plus shipping equal the total. If the AI is not available, the receipt parser reads the text.
 - **Offline:** the service worker caches the app and the OCR models. Expenses saved offline wait in a queue and sync on reconnect.
+- **Scan collection (opt-in):** the app can keep your scanned receipt photos, so a model on your own computer can learn from them. Off by default. See [Collect scans for a local model](#collect-scans-for-a-local-model).
 
 ## Local development
 
@@ -67,6 +68,39 @@ npm run admin -- reset someone@example.com --remote   # leave out --remote for t
 
 The script prints the temporary password and logs out every device of that user. The user then changes it in Settings.
 
+## Collect scans for a local model
+
+The app can keep the photo of each receipt that you scan. The companion tool [receipt-parser-jp](https://github.com/hafizulrifkihawari/receipt-parser-jp) downloads the photos to your computer, with the expense you saved. There you review them and use them to test and improve a receipt model that runs on your computer (Qwen 2.5 VL on Ollama).
+
+How it works:
+
+1. You scan a receipt and save the expense. The app sends the photo (the same 1600 px JPEG that Google Vision reads) and its first reading to the `receipt_scans` table.
+2. The tool reads each row with `wrangler d1 execute`, writes the files on your computer, and then deletes the row.
+
+The photo is in D1 only until the next download. The app does not keep a scan that you read from pasted text or an email, or a scan that you saved offline.
+
+**Privacy.** Scan collection is off for every user. Only the admin script turns it on, one user at a time. A user cannot turn it on in the app. Turn it on only for your own account, or with the user's consent.
+
+**Cost.** Free. A photo is about 0.4–0.9 MB in D1 until the download (the free plan has 5 GB). The app saves the photo as received, with no decoding, so it adds almost no Worker CPU time. The download goes through the Cloudflare API, not through the Worker.
+
+Turn it on:
+
+```sh
+npx wrangler d1 migrations apply jp-expense --remote   # adds receipt_scans (migration 0014)
+npm run deploy
+npm run admin -- collect you@example.com on --remote   # leave out --remote for the local database
+```
+
+The app sees the change within 5 minutes, or at the next login. Then set up the tool: see "Learn from kakeibo scans" in its README.
+
+Turn it off:
+
+```sh
+npm run admin -- collect you@example.com off --remote
+```
+
+Photos that already wait stay until the next download. The script shows how many wait and the command that deletes them. When you delete a user, the photos of that user are deleted too.
+
 ## Layout
 
 | Path | What it holds |
@@ -78,7 +112,8 @@ The script prints the temporary password and logs out every device of that user.
 | `shared/products.ts` | Product kinds and the product key that merges the same product |
 | `src/server/products.ts` | Product linking, price stats, price history |
 | `shared/categorizer.ts` | Category from user rules, then known chains, then item keywords |
-| `src/server/` | Server functions, auth, Vision call with the quota counter |
+| `src/server/` | Server functions, auth, Vision call with the quota counter, `saveScan` for scan collection |
+| `migrations/0014_receipt_scans.sql` | `users.collect_scans` and the `receipt_scans` table for scan collection |
 | `shared/password.ts` | PBKDF2 password hashing and random tokens (used by the Worker and `scripts/admin.ts`) |
 | `src/server/telegram.ts`, `src/routes/api/telegram.ts` | Telegram Bot API calls, and the webhook that links a chat to a user |
 | `src/client/ocr/paddle.ts` | PP-OCRv5 detection + recognition on onnxruntime-web |

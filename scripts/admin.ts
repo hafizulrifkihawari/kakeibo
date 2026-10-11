@@ -1,5 +1,6 @@
 // Admin tools for accounts. They run on your computer through wrangler, so they work when nobody can log in.
-//   npm run admin -- reset <email> [--remote]   set a temporary password and log out every device
+//   npm run admin -- reset <email> [--remote]          set a temporary password and log out every device
+//   npm run admin -- collect <email> on|off [--remote] keep this user's scanned photos for a local model
 // Without --remote, the local development database changes.
 import { execFileSync } from 'node:child_process'
 import { createInterface } from 'node:readline/promises'
@@ -53,13 +54,40 @@ async function reset(rawEmail: string, remote: boolean) {
   console.log('Log in with it, then change it in Settings.')
 }
 
-const [cmd, email] = process.argv.slice(2).filter((a) => !a.startsWith('--'))
+async function collect(rawEmail: string, on: boolean, remote: boolean) {
+  const email = quoteEmail(rawEmail)
+  const where = remote ? 'PRODUCTION' : 'local'
+  const [user] = d1(`SELECT id FROM users WHERE email = ${email}`, remote)
+  if (!user) throw new Error(`No user with the email ${rawEmail} in the ${where} database.`)
+  const id = Number(user.id)
+  if (on) {
+    const ask = `Keep the scanned receipt photos of ${rawEmail} in the ${where} database until the sync tool downloads them? Turn this on only for your own account or with the user's consent.`
+    if (remote && !(await confirm(ask))) {
+      console.log('Stopped. Nothing changed.')
+      return
+    }
+    d1(`UPDATE users SET collect_scans = 1 WHERE id = ${id}`, remote)
+    console.log(`Scan collection is on for ${rawEmail}. The app sees the change within 5 minutes, or at the next login.`)
+    return
+  }
+  d1(`UPDATE users SET collect_scans = 0 WHERE id = ${id}`, remote)
+  const [row] = d1(`SELECT count(*) AS n FROM receipt_scans WHERE user_id = ${id}`, remote)
+  console.log(`Scan collection is off for ${rawEmail}.`)
+  if (Number(row?.n)) {
+    console.log(`${row.n} photos still wait for the sync tool. Run it, or delete them:`)
+    console.log(`  npx wrangler d1 execute ${DB} ${remote ? '--remote' : '--local'} --command "DELETE FROM receipt_scans WHERE user_id = ${id}"`)
+  }
+}
+
+const [cmd, email, arg] = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 const remote = process.argv.includes('--remote')
 
 try {
   if (cmd === 'reset' && email) await reset(email, remote)
+  else if (cmd === 'collect' && email && (arg === 'on' || arg === 'off')) await collect(email, arg === 'on', remote)
   else {
     console.log('Usage: npm run admin -- reset <email> [--remote]')
+    console.log('       npm run admin -- collect <email> on|off [--remote]')
     process.exitCode = 1
   }
 } catch (e) {
