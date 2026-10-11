@@ -23,6 +23,9 @@ What Kakeibo can do now. Update this file when a change adds, removes, or change
 | Income | Add income | Record money in, with amount, date, source (salary, part-time, bonus, gift, refund, other), and note. |
 | Income | Edit and delete | Tap an income row to change or remove it. |
 | Income | Balance | Show income, spending, and the amount left, for each month and on Home. |
+| Budget | Monthly budget | Set a limit for all spending and for each category. The limits apply to every month. |
+| Budget | Progress | Show what you spent, what is left, the month-end projection, and how much you can spend each day. Home shows the monthly budget. |
+| Budget | Pace warning | Warn when the current pace goes over a limit by the month end. Show the amount over when you pass a limit. |
 | Prices | Product list | Show your products and their prices. |
 | Prices | Price history | Show earlier prices and the cheapest store for a product. Compare by one piece or by 100 g / 100 ml. |
 | Prices | Product kind | Set the kind of a product. |

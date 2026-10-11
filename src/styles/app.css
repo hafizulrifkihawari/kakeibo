@@ -550,6 +550,21 @@ textarea.input {
   border-radius: 999px;
 }
 
+/* ── Budget ─────────────────────────────────────────────────────────── */
+
+.budget-meter .track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.budget-meter .fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
 /* ── Calendar ───────────────────────────────────────────────────────── */
 
 .month-picker {

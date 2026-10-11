@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useIsMutating } from '@tanstack/react-query'
 import { CATEGORIES, CATEGORY_BY_ID, type CategoryId } from '../../shared/categories'
 import type { Expense } from '../../shared/types'
-import { yen } from '../client/format'
+import { budgetStatus, dailyAllowance } from '../../shared/budget'
+import { daysInMonth, isoMonth, yen } from '../client/format'
 
 export function CategoryDot({ id }: { id: CategoryId }) {
   const c = CATEGORY_BY_ID[id]
@@ -235,5 +236,69 @@ function EyeIcon({ off }: { off: boolean }) {
       <circle cx="12" cy="12" r="3" />
       {off && <path d="M3 3l18 18" />}
     </svg>
+  )
+}
+
+/**
+ * Progress of one monthly limit: a bar, the amount left, and a pace warning.
+ * `detail` adds the projected month total and the daily allowance.
+ */
+export function BudgetMeter({
+  ym,
+  limit,
+  spent,
+  color = 'var(--accent)',
+  detail = false,
+}: {
+  ym: string
+  limit: number
+  spent: number
+  color?: string
+  detail?: boolean
+}) {
+  const days = daysInMonth(ym)
+  const now = isoMonth()
+  // A past month is complete. A future month has no days passed yet.
+  const day = ym < now ? days : ym > now ? 1 : new Date().getDate()
+  const s = budgetStatus(limit, spent, day, days)
+  const fill = s.pace === 'over' ? 'var(--danger)' : s.pace === 'fast' ? 'var(--warn-ink)' : color
+  return (
+    <div className="budget-meter">
+      <div className="spread small">
+        <span className="num">
+          {yen(spent)} <span className="muted">/ {yen(limit)}</span>
+        </span>
+        <span className="num" style={s.remaining < 0 ? { color: 'var(--danger)' } : undefined}>
+          {s.remaining < 0 ? `${yen(-s.remaining)} over` : `${yen(s.remaining)} left`}
+        </span>
+      </div>
+      <div
+        className="track"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={limit}
+        aria-valuenow={spent}
+        aria-label="Budget used"
+      >
+        <div className="fill" style={{ width: `${Math.min(100, s.used * 100)}%`, background: fill }} />
+      </div>
+      {detail && ym >= now && (
+        <div className="stat-grid" style={{ marginTop: 12 }}>
+          <div className="stat">
+            <div className="label">Month-end projection</div>
+            <div className="value num">{yen(s.projected)}</div>
+          </div>
+          <div className="stat">
+            <div className="label">Per day from today</div>
+            <div className="value num">{yen(dailyAllowance(s, day, days))}</div>
+          </div>
+        </div>
+      )}
+      {ym === now && s.pace === 'fast' && (
+        <div className="warn small" role="status" style={{ marginTop: 8 }}>
+          At this pace you spend {yen(s.projected)}, {yen(s.projected - limit)} over the limit.
+        </div>
+      )}
+    </div>
   )
 }

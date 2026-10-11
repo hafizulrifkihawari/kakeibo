@@ -5,6 +5,7 @@ import type { CategoryRule } from '../../shared/categorizer'
 import { isChargeKind, type ExpenseCharge } from '../../shared/charges'
 import type { Expense, OcrEngine, User } from '../../shared/types'
 import { isIncomeSource, type Income } from '../../shared/income'
+import { isBudgetScope, type Budget, type BudgetScope } from '../../shared/budget'
 import {
   createSession,
   currentSessionHash,
@@ -552,6 +553,43 @@ export const deleteIncome = createServerFn({ method: 'POST' })
     const user = await requireUser()
     await env.DB.prepare('UPDATE incomes SET deleted_at = ? WHERE id = ? AND user_id = ?')
       .bind(Date.now(), data.id, user.id)
+      .run()
+    return { ok: true }
+  })
+
+// ── Budgets ─────────────────────────────────────────────────────────────
+
+export const listBudgets = createServerFn({ method: 'GET' }).handler(async (): Promise<Budget[]> => {
+  const user = await requireUser()
+  const { results } = await env.DB.prepare('SELECT scope, amount, updated_at FROM budgets WHERE user_id = ? AND amount > 0')
+    .bind(user.id)
+    .all<{ scope: string; amount: number; updated_at: number }>()
+  return results
+    .filter((r) => isBudgetScope(r.scope))
+    .map((r) => ({ scope: r.scope as BudgetScope, amount: r.amount, updatedAt: r.updated_at }))
+})
+
+export const saveBudget = createServerFn({ method: 'POST' })
+  .validator((input: unknown): Budget => {
+    const o = (input ?? {}) as Record<string, unknown>
+    const amount = Number(o.amount)
+    if (!isBudgetScope(o.scope)) throw new Error('Bad budget.')
+    if (!Number.isInteger(amount) || amount < 0 || amount > 100_000_000) throw new Error('Enter a valid amount.')
+    return {
+      scope: o.scope,
+      amount,
+      updatedAt: Number.isFinite(Number(o.updatedAt)) ? Number(o.updatedAt) : Date.now(),
+    }
+  })
+  .handler(async ({ data: b }) => {
+    const user = await requireUser()
+    // An older offline edit never overwrites a newer one.
+    await env.DB.prepare(
+      `INSERT INTO budgets (user_id, scope, amount, updated_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, scope) DO UPDATE SET amount = excluded.amount, updated_at = excluded.updated_at
+       WHERE excluded.updated_at >= budgets.updated_at`,
+    )
+      .bind(user.id, b.scope, b.amount, b.updatedAt)
       .run()
     return { ok: true }
   })

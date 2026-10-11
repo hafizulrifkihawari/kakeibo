@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { addMonths, isoDate, isoMonth, yen } from '../../client/format'
-import { incomeQuery, monthQuery } from '../../client/queries'
-import { Empty, ExpenseRow } from '../../components/bits'
+import { budgetsQuery, incomeQuery, monthQuery } from '../../client/queries'
+import { BudgetMeter, Empty, ExpenseRow } from '../../components/bits'
 import { WeekBars } from '../../components/charts'
 
 export const Route = createFileRoute('/_app/')({ component: Home })
@@ -12,6 +12,7 @@ function Home() {
   const month = useQuery(monthQuery(ym))
   // The 7-day chart can reach into last month during the first week.
   const income = useQuery(incomeQuery(ym))
+  const budgets = useQuery(budgetsQuery)
   const prev = useQuery({ ...monthQuery(addMonths(ym, -1)), enabled: new Date().getDate() < 7 })
 
   const list = month.data ?? []
@@ -20,6 +21,7 @@ function Home() {
   const monthTotal = list.reduce((s, e) => s + e.amount, 0)
   const avg = Math.round(monthTotal / new Date().getDate())
   const incomeTotal = (income.data ?? []).reduce((s, i) => s + i.amount, 0)
+  const totalLimit = budgets.data?.find((b) => b.scope === 'total')?.amount ?? 0
   const recent = [...list].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5)
 
   return (
@@ -38,6 +40,20 @@ function Home() {
           </div>
         </div>
       </section>
+
+      <Link to="/budget/$ym" params={{ ym }} className="card" style={{ display: 'block', color: 'inherit' }}>
+        <div className="spread" style={{ marginBottom: 12 }}>
+          <span style={{ fontWeight: 500 }}>Budget</span>
+          <span className="small" style={{ color: 'var(--accent)' }}>
+            {totalLimit ? 'Details →' : 'Set →'}
+          </span>
+        </div>
+        {totalLimit ? (
+          <BudgetMeter ym={ym} limit={totalLimit} spent={monthTotal} detail />
+        ) : (
+          <div className="muted small">Set a monthly budget to see what is left and your pace.</div>
+        )}
+      </Link>
 
       <Link to="/income/$ym" params={{ ym }} className="card" style={{ display: 'block', color: 'inherit' }}>
         <div className="spread" style={{ marginBottom: 12 }}>

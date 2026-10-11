@@ -8,10 +8,12 @@ import {
   getPriceStats,
   getProduct,
   glossItems,
+  listBudgets,
   listExpenses,
   listIncome,
   listProducts,
   listRules,
+  saveBudget,
   saveExpense,
   saveIncome,
   saveRule,
@@ -19,6 +21,7 @@ import {
 import type { CategoryRule } from '../../shared/categorizer'
 import type { Expense, User } from '../../shared/types'
 import type { Income } from '../../shared/income'
+import type { Budget } from '../../shared/budget'
 import { monthRange } from './format'
 
 const ME_KEY = 'jp-expense:me'
@@ -28,6 +31,7 @@ export const keys = {
   month: (ym: string) => ['expenses', ym] as const,
   income: (ym: string) => ['income', ym] as const,
   rules: ['rules'] as const,
+  budgets: ['budgets'] as const,
   products: ['products'] as const,
   product: (id: number) => ['products', id] as const,
   prices: ['prices'] as const,
@@ -76,6 +80,12 @@ export const productQuery = (id: number) =>
     queryFn: () => getProduct({ data: { id } }),
     staleTime: 60_000,
   })
+
+export const budgetsQuery = queryOptions({
+  queryKey: keys.budgets,
+  queryFn: () => listBudgets(),
+  staleTime: 5 * 60_000,
+})
 
 export const rulesQuery = queryOptions({
   queryKey: keys.rules,
@@ -216,6 +226,20 @@ export function createQueryClient(): QueryClient {
     },
     onSettled: (_d, _e, { date }: DeleteVars) => {
       qc.invalidateQueries({ queryKey: keys.income(date.slice(0, 7)) })
+    },
+  })
+
+  qc.setMutationDefaults(['saveBudget'], {
+    mutationFn: (b: Budget) => saveBudget({ data: b }),
+    onMutate: async (b: Budget) => {
+      await qc.cancelQueries({ queryKey: keys.budgets })
+      qc.setQueryData<Budget[]>(keys.budgets, (l) => [
+        ...(l ?? []).filter((x) => x.scope !== b.scope),
+        ...(b.amount > 0 ? [b] : []),
+      ])
+    },
+    onSettled: () => {
+      if (qc.isMutating({ mutationKey: ['saveBudget'] }) <= 1) qc.invalidateQueries({ queryKey: keys.budgets })
     },
   })
 
