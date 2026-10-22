@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import { fetchMe, keys } from '../client/queries'
-import { OfflineBanner } from '../components/bits'
+import { OfflineBanner, useReopenKeyboard } from '../components/bits'
 import { TabBar } from '../components/TabBar'
 
 // Signed-in area. It renders on the client only, so the offline cache in IndexedDB is the
@@ -16,6 +16,7 @@ export const Route = createFileRoute('/_app')({
 })
 
 function AppLayout() {
+  useReopenKeyboard()
   return (
     <>
       <OfflineBanner />

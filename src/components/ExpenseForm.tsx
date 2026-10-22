@@ -22,7 +22,7 @@ import {
 import { glossQuery, priceStatsQuery, productsQuery, type DeleteVars, type SaveVars } from '../client/queries'
 import { Link } from '@tanstack/react-router'
 import { shortStore, yen } from '../client/format'
-import { CategoryChips } from './bits'
+import { CategoryChips, isRefocusing } from './bits'
 
 interface ItemDraft {
   key: number
@@ -192,7 +192,7 @@ function ProductLine({
           onChange={(e) => setDraft(e.target.value)}
           onBlur={(e) => {
             // The window lost focus (e.g. the Android keyboard picker opened), not the input.
-            if (document.activeElement === e.currentTarget) return
+            if (document.activeElement === e.currentTarget || isRefocusing()) return
             commit()
           }}
           onKeyDown={(e) => {
