@@ -16,6 +16,8 @@ See [FEATURES.md](FEATURES.md) for the full list of features.
 
 ## Local development
 
+Use Node.js 26.12.0 or a later 26.x version. The file `.nvmrc` sets this version. Run `nvm use` or `fnm use` to select it.
+
 ```sh
 npm install                                   # also copies the ONNX Runtime WASM into public/ort
 npx wrangler d1 migrations apply jp-expense --local
