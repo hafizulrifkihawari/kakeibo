@@ -151,48 +151,6 @@ export function useOnline(): boolean {
   return online
 }
 
-let refocusing = false
-
-/** True while `useReopenKeyboard` blurs and refocuses an input; blur handlers must ignore it. */
-export function isRefocusing(): boolean {
-  return refocusing
-}
-
-function isTextField(el: Element | null): el is HTMLInputElement | HTMLTextAreaElement {
-  if (el instanceof HTMLTextAreaElement) return !el.readOnly
-  if (!(el instanceof HTMLInputElement) || el.readOnly) return false
-  return ['text', 'search', 'email', 'tel', 'url', 'number', 'password'].includes(el.type)
-}
-
-/**
- * On Android, the keyboard picker (globe key) takes window focus and hides the keyboard, but the
- * input stays focused, so nothing reopens it. When the window regains focus, refocus the input.
- */
-export function useReopenKeyboard() {
-  useEffect(() => {
-    const reopen = () => {
-      const el = document.activeElement
-      if (!isTextField(el)) return
-      requestAnimationFrame(() => {
-        if (document.activeElement !== el) return
-        refocusing = true
-        el.blur()
-        el.focus()
-        refocusing = false
-      })
-    }
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') reopen()
-    }
-    window.addEventListener('focus', reopen)
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      window.removeEventListener('focus', reopen)
-      document.removeEventListener('visibilitychange', onVisible)
-    }
-  }, [])
-}
-
 export function OfflineBanner() {
   const online = useOnline()
   const queued = useIsMutating({ predicate: (m) => m.state.isPaused })
