@@ -11,8 +11,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
-      { name: 'theme-color', content: '#f5f4f0', media: '(prefers-color-scheme: light)' },
-      { name: 'theme-color', content: '#15181a', media: '(prefers-color-scheme: dark)' },
+      { name: 'theme-color', content: '#fffaf0' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
       { title: 'Kakeibo · Expense tracker' },
     ],

@@ -64,7 +64,7 @@ function ForgotPassword() {
       </form>
 
       <p className="muted" style={{ textAlign: 'center', marginTop: 20 }}>
-        <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 500 }}>
+        <Link to="/login" style={{ color: 'var(--link)', fontWeight: 500 }}>
           Back to log in
         </Link>
       </p>

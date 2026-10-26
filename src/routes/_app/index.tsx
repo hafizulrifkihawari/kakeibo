@@ -44,7 +44,7 @@ function Home() {
       <Link to="/budget/$ym" params={{ ym }} className="card" style={{ display: 'block', color: 'inherit' }}>
         <div className="spread" style={{ marginBottom: 12 }}>
           <span style={{ fontWeight: 500 }}>Budget</span>
-          <span className="small" style={{ color: 'var(--accent)' }}>
+          <span className="small" style={{ color: 'var(--link)' }}>
             {totalLimit ? 'Details →' : 'Set →'}
           </span>
         </div>
@@ -58,7 +58,7 @@ function Home() {
       <Link to="/income/$ym" params={{ ym }} className="card" style={{ display: 'block', color: 'inherit' }}>
         <div className="spread" style={{ marginBottom: 12 }}>
           <span style={{ fontWeight: 500 }}>Income</span>
-          <span className="small" style={{ color: 'var(--accent)' }}>
+          <span className="small" style={{ color: 'var(--link)' }}>
             {incomeTotal ? 'Details →' : 'Add →'}
           </span>
         </div>
@@ -79,7 +79,7 @@ function Home() {
       <section className="card">
         <div className="spread" style={{ marginBottom: 12 }}>
           <span style={{ fontWeight: 500 }}>Last 7 days</span>
-          <Link to="/month/$ym" params={{ ym }} className="small" style={{ color: 'var(--accent)' }}>
+          <Link to="/month/$ym" params={{ ym }} className="small" style={{ color: 'var(--link)' }}>
             Calendar →
           </Link>
         </div>

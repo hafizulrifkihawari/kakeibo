@@ -83,7 +83,7 @@ function ResetPassword() {
       </form>
 
       <p className="muted" style={{ textAlign: 'center', marginTop: 20 }}>
-        <Link to="/forgot-password" style={{ color: 'var(--accent)', fontWeight: 500 }}>
+        <Link to="/forgot-password" style={{ color: 'var(--link)', fontWeight: 500 }}>
           Ask for a new link
         </Link>
       </p>

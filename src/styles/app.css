@@ -1,25 +1,32 @@
 /* Design tokens. Soft off-white and soft dark text reduce glare; one teal accent marks primary actions. */
+/*
+ * Sketchbook look, taken from the pathway game UI: cream paper, thick ink outlines, hard offset
+ * shadows, and pill buttons that press down. The type stays Lexend.
+ */
 :root {
   --font: 'Lexend', 'Zen Kaku Gothic New', 'Noto Sans JP', system-ui, sans-serif;
 
-  --bg: #f5f4f0;
-  --surface: #fdfcfa;
-  --surface-2: #efede7;
-  --text: #2b2d2f;
-  --muted: #62676b;
-  --line: #e2dfd8;
-  --accent: #2c7a74;
-  --accent-ink: #ffffff;
-  --accent-soft: #dcefec;
-  --danger: #b4474e;
-  --danger-ink: #ffffff;
-  --warn-bg: #fbf1dc;
-  --warn-ink: #7a5310;
-  --furigana: #8a4fb3;
-  --translation: #2f6fa8;
-  --price-up: #b4474e;
-  --price-down: #2e7a4b;
-  --shadow: 0 1px 2px rgb(40 36 30 / 0.05), 0 4px 16px rgb(40 36 30 / 0.06);
+  --ink: #2b2140;
+  --bg: #f3ecd9;
+  --surface: #fffaf0;
+  --surface-2: #fff3dc;
+  --text: #2b2140;
+  --muted: #6e6580;
+  --line: rgb(43 33 64 / 0.2);
+  --accent: #ff6b4a;
+  --accent-ink: #2b2140;
+  --accent-soft: #ffe1d6;
+  --link: #9c3d22;
+  --danger: #9c3d22;
+  --danger-ink: #fffaf0;
+  --warn-bg: #ffd23f;
+  --warn-ink: #2b2140;
+  --furigana: #7a3fa8;
+  --translation: #1f5f94;
+  --price-up: #9c3d22;
+  --price-down: #15796d;
+  --shadow: 0 6px 0 rgb(43 33 64 / 0.18), 0 14px 30px rgb(43 33 64 / 0.14);
+  --hard: 0 4px 0 var(--ink);
 
   --cat-groceries: #6fa874;
   --cat-dining: #df9a4a;
@@ -32,37 +39,13 @@
   --cat-utilities: #8592a8;
   --cat-other: #a3a3a3;
 
-  --radius: 16px;
-  --radius-sm: 10px;
+  --radius: 22px;
+  --radius-sm: 12px;
   --tap: 48px;
   --gutter: 16px;
   --tabbar-h: 68px;
 
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #15181a;
-    --surface: #1e2225;
-    --surface-2: #272c30;
-    --text: #e4e7e8;
-    --muted: #a2a9ad;
-    --line: #2f3539;
-    --accent: #62bab2;
-    --accent-ink: #0f2523;
-    --accent-soft: #1f3a37;
-    --danger: #ec8f95;
-    --danger-ink: #2a1013;
-    --warn-bg: #3a2f17;
-    --warn-ink: #f3d38f;
-    --furigana: #c6a2e8;
-    --translation: #8dc0ec;
-    --price-up: #ec8f95;
-    --price-down: #7fcf9a;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
-    color-scheme: dark;
-  }
 }
 
 *,
@@ -74,7 +57,13 @@
 html,
 body {
   margin: 0;
-  background: var(--bg);
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    color-mix(in srgb, #fbf6ea 60%, var(--bg)) 0%,
+    var(--bg) 55%,
+    color-mix(in srgb, #e7cf9c 55%, var(--bg)) 100%
+  );
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font);
   font-size: 16px;
@@ -123,7 +112,7 @@ a {
 }
 
 .page-title {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 600;
   margin: 4px 0 16px;
 }
@@ -148,15 +137,16 @@ a {
 
 .card {
   background: var(--surface);
+  border: 3px solid var(--ink);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 16px;
 }
 
 .section-label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
   letter-spacing: 0.02em;
   margin: 8px 4px;
 }
@@ -196,20 +186,35 @@ a {
   min-height: var(--tap);
   padding: 0 20px;
   border-radius: 999px;
-  border: 1px solid var(--line);
+  border: 3px solid var(--ink);
   background: var(--surface);
-  font-weight: 500;
+  box-shadow: var(--hard);
+  font-weight: 600;
   cursor: pointer;
-  transition: transform 150ms ease, background 150ms ease;
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
-.btn:active {
-  transform: scale(0.97);
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--ink);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.btn:focus-visible,
+.chip:focus-visible,
+.tab:focus-visible,
+.tab-add:focus-visible,
+.cal-cell:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .btn-primary {
   background: var(--accent);
-  border-color: var(--accent);
   color: var(--accent-ink);
 }
 
@@ -220,6 +225,14 @@ a {
 .btn-ghost {
   border-color: transparent;
   background: transparent;
+  box-shadow: none;
+}
+
+.btn-ghost:hover:not(:disabled),
+.btn-ghost:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+  background: var(--surface-2);
 }
 
 .btn-danger {
@@ -227,8 +240,13 @@ a {
 }
 
 .btn:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
+  box-shadow: 0 2px 0 var(--ink);
+}
+
+.btn-ghost:disabled {
+  box-shadow: none;
 }
 
 .icon-btn {
@@ -242,7 +260,7 @@ a {
 }
 
 .icon-btn:active {
-  background: var(--surface-2);
+  background: var(--accent-soft);
 }
 
 /* ── Forms ──────────────────────────────────────────────────────────── */
@@ -253,8 +271,9 @@ a {
 }
 
 .field > span {
-  font-size: 0.875rem;
-  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .input {
@@ -262,16 +281,20 @@ a {
   min-height: var(--tap);
   padding: 10px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 2px solid var(--ink);
+  background: var(--surface-2);
   font-size: 1rem;
   outline: none;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition: box-shadow 150ms ease;
 }
 
-.input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+.input::placeholder {
+  color: color-mix(in srgb, var(--muted) 75%, transparent);
+}
+
+.input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .password-wrap {
@@ -303,27 +326,32 @@ textarea.input {
   padding: 6px 14px;
 }
 
-.notice {
-  background: var(--accent-soft);
-  color: var(--text);
+.notice,
+.error,
+.warn {
+  border: 2px solid;
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.notice {
+  background: #dff4ee;
+  border-color: #15796d;
+  color: #0f5d53;
 }
 
 .error {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  background: #ffe6df;
+  border-color: var(--danger);
   color: var(--danger);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-size: 0.9375rem;
 }
 
 .warn {
   background: var(--warn-bg);
+  border-color: var(--ink);
   color: var(--warn-ink);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
   font-size: 0.875rem;
 }
 
@@ -341,34 +369,43 @@ textarea.input {
   gap: 6px;
   min-height: 40px;
   padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  border-radius: 14px;
+  border: 3px solid var(--ink);
   background: var(--surface);
+  box-shadow: 0 3px 0 var(--ink);
   font-size: 0.9375rem;
+  font-weight: 500;
   cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 var(--ink);
 }
 
 .chip[aria-pressed='true'] {
-  border-color: var(--chip-color, var(--accent));
-  background: color-mix(in srgb, var(--chip-color, var(--accent)) 16%, var(--surface));
-  font-weight: 500;
+  background: color-mix(in srgb, var(--chip-color, var(--accent)) 55%, var(--surface));
+  font-weight: 600;
 }
 
 .cat-dot {
   width: 36px;
   height: 36px;
   border-radius: 12px;
+  border: 2px solid var(--ink);
   display: grid;
   place-items: center;
   font-size: 1.1rem;
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--dot-color) 20%, var(--surface));
+  background: color-mix(in srgb, var(--dot-color) 45%, var(--surface));
 }
 
 /* ── Expense list ───────────────────────────────────────────────────── */
 
 .list {
   background: var(--surface);
+  border: 3px solid var(--ink);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -382,7 +419,7 @@ textarea.input {
   min-height: 64px;
   padding: 10px 16px;
   background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px dashed var(--line);
   touch-action: pan-y;
   transition: transform 180ms ease;
 }
@@ -395,7 +432,7 @@ textarea.input {
 .income-row {
   width: 100%;
   border: 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px dashed var(--line);
   text-align: left;
   font: inherit;
   color: inherit;
@@ -412,7 +449,7 @@ textarea.input {
 }
 
 .list-row .title {
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -430,7 +467,7 @@ textarea.input {
 .swipe-wrap {
   position: relative;
   overflow: hidden;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px dashed var(--line);
 }
 
 .swipe-wrap:last-child {
@@ -448,7 +485,7 @@ textarea.input {
   border: 0;
   background: var(--danger);
   color: var(--danger-ink);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -458,6 +495,7 @@ textarea.input {
   align-items: baseline;
   margin: 18px 4px 8px;
   font-size: 0.9375rem;
+  font-weight: 600;
 }
 
 .empty {
@@ -499,9 +537,10 @@ textarea.input {
 .week-bars .bar {
   width: 100%;
   max-width: 28px;
+  border: 2px solid var(--ink);
   border-radius: 8px 8px 4px 4px;
   background: var(--accent);
-  opacity: 0.8;
+  opacity: 0.55;
   min-height: 3px;
   transition: height 200ms ease;
 }
@@ -534,11 +573,12 @@ textarea.input {
 }
 
 .cat-bar-row[aria-pressed='true'] {
-  background: var(--surface-2);
+  background: var(--accent-soft);
 }
 
 .cat-bar-row .track {
-  height: 8px;
+  height: 12px;
+  border: 2px solid var(--ink);
   border-radius: 999px;
   background: var(--surface-2);
   overflow: hidden;
@@ -553,7 +593,8 @@ textarea.input {
 /* ── Budget ─────────────────────────────────────────────────────────── */
 
 .budget-meter .track {
-  height: 8px;
+  height: 14px;
+  border: 2px solid var(--ink);
   border-radius: 999px;
   background: var(--surface-2);
   overflow: hidden;
@@ -574,7 +615,7 @@ textarea.input {
 }
 
 .month-picker h1 {
-  font-size: 1.375rem;
+  font-size: 1.5rem;
   font-weight: 600;
   margin: 0;
 }
@@ -599,19 +640,20 @@ textarea.input {
 .cal-cell {
   aspect-ratio: 1 / 1.1;
   border-radius: 10px;
-  border: 0;
+  border: 2px solid color-mix(in srgb, var(--ink) 35%, transparent);
   padding: 4px 2px;
   display: grid;
   grid-template-rows: auto 1fr;
   justify-items: center;
   font-size: 0.875rem;
-  background: color-mix(in srgb, var(--accent) calc(var(--heat, 0) * 38%), var(--surface));
+  background: color-mix(in srgb, var(--accent) calc(var(--heat, 0) * 60%), var(--surface));
   cursor: pointer;
 }
 
 .cal-cell.is-today {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  border-color: var(--ink);
+  box-shadow: 0 2px 0 var(--ink);
+  font-weight: 700;
 }
 
 .cal-cell .amt {
@@ -623,6 +665,7 @@ textarea.input {
 
 .cal-cell.blank {
   background: transparent;
+  border-color: transparent;
   cursor: default;
 }
 
@@ -639,9 +682,8 @@ textarea.input {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   align-items: center;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid var(--line);
+  background: var(--surface);
+  border-top: 3px solid var(--ink);
 }
 
 .tab {
@@ -649,6 +691,7 @@ textarea.input {
   justify-items: center;
   gap: 2px;
   font-size: 0.6875rem;
+  font-weight: 500;
   color: var(--muted);
   padding: 8px 0;
   min-height: var(--tap);
@@ -665,8 +708,17 @@ textarea.input {
 
 .tab[data-status='active'],
 .tab.active {
-  color: var(--accent);
-  font-weight: 500;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.tab[data-status='active'] .ico,
+.tab.active .ico {
+  background: var(--accent);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 1px 12px;
+  margin: -3px 0;
 }
 
 .tab[data-status='active'] .ico {
@@ -679,20 +731,26 @@ textarea.input {
   height: 60px;
   margin-top: -22px;
   border-radius: 999px;
-  border: 0;
+  border: 3px solid var(--ink);
   background: var(--accent);
   color: var(--accent-ink);
   font-size: 2rem;
   line-height: 1;
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 5px 0 var(--ink);
   cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.tab-add:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--ink);
 }
 
 .sheet-backdrop {
   position: fixed;
   inset: 0;
   z-index: 30;
-  background: rgb(0 0 0 / 0.35);
+  background: rgb(43 33 64 / 0.45);
   animation: fade 160ms ease;
 }
 
@@ -705,6 +763,8 @@ textarea.input {
   max-width: 560px;
   margin: 0 auto;
   background: var(--surface);
+  border: 3px solid var(--ink);
+  border-bottom: 0;
   border-radius: 24px 24px 0 0;
   padding: 12px var(--gutter) calc(20px + env(safe-area-inset-bottom));
   animation: slide-up 200ms ease;
@@ -714,7 +774,7 @@ textarea.input {
   width: 40px;
   height: 4px;
   border-radius: 999px;
-  background: var(--line);
+  background: var(--ink);
   margin: 0 auto 16px;
 }
 
@@ -753,6 +813,8 @@ textarea.input {
   z-index: 15;
   background: var(--warn-bg);
   color: var(--warn-ink);
+  border-bottom: 3px solid var(--ink);
+  font-weight: 500;
   text-align: center;
   font-size: 0.875rem;
   padding: 8px 16px;
@@ -767,8 +829,9 @@ textarea.input {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--text);
-  color: var(--bg);
+  background: var(--ink);
+  color: var(--surface);
+  border: 3px solid var(--ink);
   border-radius: 999px;
   padding: 6px 8px 6px 18px;
   box-shadow: var(--shadow);
@@ -779,7 +842,7 @@ textarea.input {
 .toast button {
   border: 0;
   background: transparent;
-  color: var(--accent-soft);
+  color: var(--warn-bg);
   font-weight: 600;
   min-height: 40px;
   padding: 0 12px;
@@ -799,7 +862,7 @@ textarea.input {
   height: 22px;
   border-radius: 999px;
   border: 3px solid var(--accent-soft);
-  border-top-color: var(--accent);
+  border-top-color: var(--ink);
   animation: spin 800ms linear infinite;
   flex-shrink: 0;
 }
@@ -809,17 +872,19 @@ textarea.input {
   align-items: center;
   gap: 6px;
   font-size: 0.8125rem;
-  padding: 4px 10px;
+  padding: 3px 10px;
+  border: 2px solid var(--ink);
   border-radius: 999px;
   background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 500;
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .receipt-preview {
   width: 100%;
   max-height: 220px;
   object-fit: contain;
+  border: 2px solid var(--ink);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
@@ -898,9 +963,9 @@ textarea.input {
 .qty-unit {
   min-height: 32px;
   padding: 2px 4px;
-  border: 1px solid var(--line);
+  border: 2px solid var(--ink);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--surface-2);
   color: var(--text);
   font: inherit;
   font-size: 0.8125rem;
@@ -926,9 +991,9 @@ textarea.input {
   min-height: 32px;
   max-width: 100%;
   padding: 0 8px;
-  border: 1px solid var(--line);
+  border: 2px solid var(--ink);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--surface-2);
   color: var(--text);
   font: inherit;
   font-size: 0.8125rem;
@@ -945,7 +1010,7 @@ textarea.input {
   gap: 4px;
   min-height: 32px;
   padding: 0 10px;
-  border: 1px dashed var(--line);
+  border: 2px dashed var(--ink);
   border-radius: 999px;
   background: transparent;
   color: var(--text);
@@ -999,13 +1064,15 @@ textarea.input {
 .price-chart .line {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 2;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .price-chart .dot {
   fill: var(--surface);
-  stroke: var(--accent);
-  stroke-width: 2;
+  stroke: var(--ink);
+  stroke-width: 2.5;
 }
 
 .price-chart .dot.min {
@@ -1034,7 +1101,7 @@ details.collapse > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 details.collapse > summary::-webkit-details-marker {
@@ -1073,16 +1140,18 @@ details.collapse[open] > summary::after {
 .brand .logo {
   width: 64px;
   height: 64px;
+  border: 3px solid var(--ink);
   border-radius: 20px;
   display: grid;
   place-items: center;
   font-size: 2rem;
-  background: var(--accent-soft);
+  background: var(--accent);
+  box-shadow: var(--hard);
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 600;
 }
 

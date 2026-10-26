@@ -99,7 +99,7 @@ function IncomeView() {
                       {s.en} <span className="ja">{s.ja}</span> · {dayLabel(i.date)}
                     </div>
                   </div>
-                  <div className="amount num" style={{ color: 'var(--accent)' }}>
+                  <div className="amount num" style={{ color: 'var(--link)' }}>
                     +{yen(i.amount)}
                   </div>
                 </button>
