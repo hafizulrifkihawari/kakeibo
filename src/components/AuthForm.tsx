@@ -83,7 +83,7 @@ export function AuthForm({ mode, notice }: { mode: 'login' | 'register'; notice?
           {!isLogin && <small className="muted">At least 8 characters.</small>}
         </label>
         {isLogin && (
-          <Link to="/forgot-password" className="small" style={{ color: 'var(--accent)', justifySelf: 'end' }}>
+          <Link to="/forgot-password" className="small" style={{ color: 'var(--link)', justifySelf: 'end' }}>
             Forgot password?
           </Link>
         )}
@@ -94,7 +94,7 @@ export function AuthForm({ mode, notice }: { mode: 'login' | 'register'; notice?
 
       <p className="muted" style={{ textAlign: 'center', marginTop: 20 }}>
         {isLogin ? "Don't have an account? " : 'Already have an account? '}
-        <Link to={isLogin ? '/register' : '/login'} style={{ color: 'var(--accent)', fontWeight: 500 }}>
+        <Link to={isLogin ? '/register' : '/login'} style={{ color: 'var(--link)', fontWeight: 500 }}>
           {isLogin ? 'Register' : 'Log in'}
         </Link>
       </p>
