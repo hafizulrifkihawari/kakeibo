@@ -5,7 +5,7 @@ interface __BaseEnv_Env {
 	DB: D1Database;
 	AI: Ai;
 	VISION_MONTHLY_LIMIT: "950";
-	APP_URL: "https://kakeibo.jp-expense-tracker.workers.dev";
+	APP_URL: "https://kakeibo.psi-pocket.workers.dev";
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_Env {}

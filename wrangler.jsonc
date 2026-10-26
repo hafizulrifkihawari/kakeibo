@@ -23,7 +23,7 @@
 		// Stop calling Google Vision at this many images per month (free tier: 1,000).
 		"VISION_MONTHLY_LIMIT": "950",
 		// The public address, for links that the Telegram bot sends. .dev.vars sets it for local use.
-		"APP_URL": "https://kakeibo.jp-expense-tracker.workers.dev"
+		"APP_URL": "https://kakeibo.psi-pocket.workers.dev"
 	}
 	// Secrets (not in this file): GOOGLE_VISION_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET
 	//   local: put them in .dev.vars
