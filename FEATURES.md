@@ -16,6 +16,7 @@ What Kakeibo can do now. Update this file when a change adds, removes, or change
 | Expense form | Price check | Compare each price with your earlier purchases of the same product. |
 | Expense form | Other costs | Add tax, shipping, fees, and discounts. These are not products. |
 | Expense form | Tax help | Read added tax (外税) from the receipt. Offer "Add as tax" when the total is a little more than the items. |
+| Expense form | Thousand separators | Show a "." between thousands in every money field, such as 1.250.000. This also applies to income and budget fields. |
 | Expense form | Category | Suggest a category from your rules, store chains, and item words. Learn a rule when you change it. |
 | Expense form | Edit and delete | Change or remove an expense that you saved. |
 | Spending | Home | Show today's total, this month's total, the daily average, the last 7 days, and recent expenses. |

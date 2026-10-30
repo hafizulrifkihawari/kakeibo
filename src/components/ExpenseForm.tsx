@@ -22,7 +22,7 @@ import {
 import { glossQuery, priceStatsQuery, productsQuery, type DeleteVars, type SaveVars } from '../client/queries'
 import { Link } from '@tanstack/react-router'
 import { shortStore, yen } from '../client/format'
-import { CategoryChips } from './bits'
+import { CategoryChips, MoneyInput } from './bits'
 
 interface ItemDraft {
   key: number
@@ -459,12 +459,11 @@ export function ExpenseForm({
       <div className="card stack">
         <label className="field">
           <span>Amount (¥)</span>
-          <input
+          <MoneyInput
             className="input amount-input num"
-            inputMode="numeric"
             placeholder="0"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             autoFocus={isNew && !initial.amount}
           />
         </label>
@@ -509,12 +508,11 @@ export function ExpenseForm({
                 value={i.name}
                 onChange={(e) => updateItem(i.key, { name: e.target.value })}
               />
-              <input
+              <MoneyInput
                 className="input num"
                 aria-label="Price"
-                inputMode="numeric"
                 value={i.price}
-                onChange={(e) => updateItem(i.key, { price: e.target.value })}
+                onChange={(price) => updateItem(i.key, { price })}
               />
               <button
                 type="button"
@@ -579,12 +577,11 @@ export function ExpenseForm({
                 value={c.name}
                 onChange={(e) => updateCharge(c.key, { name: e.target.value })}
               />
-              <input
+              <MoneyInput
                 className="input num"
                 aria-label="Amount"
-                inputMode="numeric"
                 value={c.amount}
-                onChange={(e) => updateCharge(c.key, { amount: e.target.value })}
+                onChange={(amount) => updateCharge(c.key, { amount })}
               />
               <button
                 type="button"

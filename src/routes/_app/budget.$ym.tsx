@@ -5,7 +5,7 @@ import { CATEGORIES } from '../../../shared/categories'
 import type { Budget, BudgetScope } from '../../../shared/budget'
 import { addMonths, monthLabel } from '../../client/format'
 import { budgetsQuery, monthQuery } from '../../client/queries'
-import { BudgetMeter, CategoryDot } from '../../components/bits'
+import { BudgetMeter, CategoryDot, MoneyInput } from '../../components/bits'
 import { sumBy } from '../../components/charts'
 
 export const Route = createFileRoute('/_app/budget/$ym')({
@@ -109,12 +109,11 @@ function BudgetForm({ limits, onDone }: { limits: Map<BudgetScope, number>; onDo
   }
 
   const field = (scope: BudgetScope) => (
-    <input
+    <MoneyInput
       className="input num"
-      inputMode="numeric"
       placeholder="No limit"
       value={values[scope]}
-      onChange={(e) => setValues((v) => ({ ...v, [scope]: e.target.value }))}
+      onChange={(raw) => setValues((v) => ({ ...v, [scope]: raw }))}
     />
   )
 

@@ -302,3 +302,32 @@ export function BudgetMeter({
     </div>
   )
 }
+
+/** Shows a whole number with "." between thousands. `value` and `onChange` stay raw digits. */
+export function groupThousands(raw: string): string {
+  const neg = raw.startsWith('-')
+  const digits = raw.replace(/\D/g, '')
+  return (neg ? '-' : '') + digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
+export function MoneyInput({
+  value,
+  onChange,
+  ...rest
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'> & {
+  value: string
+  onChange: (raw: string) => void
+}) {
+  return (
+    <input
+      inputMode="numeric"
+      {...rest}
+      value={groupThousands(value)}
+      onChange={(e) => {
+        const s = e.target.value.normalize('NFKC')
+        const neg = s.trimStart().startsWith('-')
+        onChange((neg ? '-' : '') + s.replace(/\D/g, ''))
+      }}
+    />
+  )
+}

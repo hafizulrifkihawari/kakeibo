@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { INCOME_BY_ID, INCOME_SOURCES, type Income, type IncomeSource } from '../../../shared/income'
 import { addMonths, dayLabel, isoDate, isoMonth, monthLabel, uuid, yen } from '../../client/format'
 import { incomeQuery, monthQuery, type DeleteVars, type SaveIncomeVars } from '../../client/queries'
-import { Empty } from '../../components/bits'
+import { Empty, MoneyInput } from '../../components/bits'
 
 export const Route = createFileRoute('/_app/income/$ym')({
   params: {
@@ -148,12 +148,11 @@ function IncomeForm({ ym, initial, onDone }: { ym: string; initial: Income | nul
       )}
       <label className="field">
         <span>Amount (¥)</span>
-        <input
+        <MoneyInput
           className="input amount-input num"
-          inputMode="numeric"
           placeholder="0"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={setAmount}
         />
       </label>
       <label className="field">
