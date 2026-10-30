@@ -315,3 +315,14 @@ describe('categorize', () => {
     expect(categorize({ store: '山田薬局', text: '処方 調剤' })).toBe('medical')
   })
 })
+
+describe('daiso text receipt', () => {
+  it('reads every item when two cheap items add up to a later price', () => {
+    const r = parseReceipt(readFileSync(new URL('./fixtures/daiso.clean.txt', import.meta.url), 'utf8'), today)
+    expect(r.store).toBe('ダイソー')
+    expect(r.items).toHaveLength(11)
+    expect(r.items.reduce((s, i) => s + i.price, 0)).toBe(1700)
+    expect(r.charges).toEqual([{ kind: 'tax', name: '消費税', amount: 170 }])
+    expect(r.total).toBe(1870)
+  })
+})

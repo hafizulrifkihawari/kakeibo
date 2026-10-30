@@ -291,6 +291,12 @@ function withNote(item: ReceiptItem, note: Note): ReceiptItem {
   return note.unit ? { ...item, qty: note.qty, unit: note.unit } : { ...item, qty: note.qty }
 }
 
+/** True when a priced line after `i` is a normal item line, not a subtotal, tax, or total line. */
+function itemFollows(lines: string[], i: number): boolean {
+  const next = lines.slice(i + 1).find((l) => lineAmount(l) !== null)
+  return next !== undefined && !STOP_ITEMS.test(next) && !IGNORE.test(next)
+}
+
 function parseItems(lines: string[], start: number): ReceiptItem[] {
   // When most prices carry ¥, a bare number is a code or a count, not a price.
   const requireYen = lines.filter((l) => /¥/.test(l)).length >= 3
@@ -319,7 +325,9 @@ function parseItems(lines: string[], start: number): ReceiptItem[] {
     const price = lineAmount(line)
     if (price === null) continue
     // A price equal to everything so far is the subtotal, even if OCR lost the 小計 label.
-    if (items.length >= 2 && price === sum) break
+    // A named line that is followed by more items is an item: two cheap items can add up to its price.
+    const named = /[\p{L}]/u.test(cleanName(line))
+    if (items.length >= 2 && price === sum && !(named && itemFollows(lines, i))) break
     let name = cleanName(line)
     const usable = (l: string | undefined) =>
       l !== undefined && lineAmount(l) === null && !HEADER_NOISE.test(l) && !IGNORE.test(l) && /[\p{L}]{2,}/u.test(l)
@@ -370,7 +378,7 @@ function parseStore(lines: string[], text: string): string | null {
 const TAX_RATE = /外税額?\s*(\d{1,2})\s*%|(\d{1,2})\s*%?\s*外税(?!計|合計)/
 const TAX_SUM = /外税(計|合計)/
 // "消費税 ¥95" can also be tax that the prices include, so it needs the sum check.
-const TAX_PLAIN = /^消費税(等|額)?\s*(計|合計)?(?![\p{L}])/u
+const TAX_PLAIN = /^消費税(等|額)?\s*(計|合計)?(?![\p{L}])|^\d{1,2}\s*%\s*税額/u
 // A tax base (対象), tax that the prices include (内税), or a repeat in brackets.
 const TAX_SKIP = /対象|内税|内消|^\(/
 
