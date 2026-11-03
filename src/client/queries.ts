@@ -7,6 +7,7 @@ import {
   getMe,
   getPriceStats,
   getProduct,
+  getReport,
   glossItems,
   listBudgets,
   listExpenses,
@@ -17,11 +18,13 @@ import {
   saveExpense,
   saveIncome,
   saveRule,
+  summarizeReport,
 } from '../server/fns'
 import type { CategoryRule } from '../../shared/categorizer'
 import type { Expense, User } from '../../shared/types'
 import type { Income } from '../../shared/income'
 import type { Budget } from '../../shared/budget'
+import type { PeriodRange } from '../../shared/report'
 import { monthRange } from './format'
 
 const ME_KEY = 'jp-expense:me'
@@ -35,6 +38,7 @@ export const keys = {
   products: ['products'] as const,
   product: (id: number) => ['products', id] as const,
   prices: ['prices'] as const,
+  report: ['report'] as const,
 }
 
 export const monthQuery = (ym: string) =>
@@ -49,6 +53,27 @@ export const incomeQuery = (ym: string) =>
     queryKey: keys.income(ym),
     queryFn: () => listIncome({ data: monthRange(ym) }),
     staleTime: 30_000,
+  })
+
+/** Sums for one report period and the span it is compared with. */
+export const reportQuery = (r: PeriodRange) =>
+  queryOptions({
+    queryKey: [...keys.report, r.from, r.to, r.prevFrom, r.prevTo] as const,
+    queryFn: () => getReport({ data: { from: r.from, to: r.to, prevFrom: r.prevFrom, prevTo: r.prevTo } }),
+    staleTime: 60_000,
+  })
+
+/**
+ * The AI review of a report. It runs only when the user asks (refetch), and is kept forever:
+ * `hash` changes when the numbers change, so a stale summary is never shown for new numbers.
+ */
+export const reportSummaryQuery = (r: PeriodRange, hash: string, facts: unknown) =>
+  queryOptions({
+    queryKey: ['reportSummary', r.from, r.to, hash] as const,
+    queryFn: () => summarizeReport({ data: { facts } }),
+    enabled: false,
+    staleTime: Infinity,
+    retry: false,
   })
 
 /** Furigana and English for item names. Kept forever: the answer for a name does not change. */
@@ -180,6 +205,7 @@ export function createQueryClient(): QueryClient {
     onSettled: (_d, _e, { expense }: SaveVars) => {
       if (qc.isMutating({ mutationKey: ['saveExpense'] }) <= 1) {
         qc.invalidateQueries({ queryKey: keys.month(expense.date.slice(0, 7)) })
+        qc.invalidateQueries({ queryKey: keys.report })
         qc.invalidateQueries({ queryKey: keys.products })
         qc.invalidateQueries({ queryKey: keys.prices })
       }
@@ -195,6 +221,7 @@ export function createQueryClient(): QueryClient {
     },
     onSettled: (_d, _e, { date }: DeleteVars) => {
       qc.invalidateQueries({ queryKey: keys.month(date.slice(0, 7)) })
+      qc.invalidateQueries({ queryKey: keys.report })
       qc.invalidateQueries({ queryKey: keys.products })
       qc.invalidateQueries({ queryKey: keys.prices })
     },
@@ -213,6 +240,7 @@ export function createQueryClient(): QueryClient {
     onSettled: (_d, _e, { income }: SaveIncomeVars) => {
       if (qc.isMutating({ mutationKey: ['saveIncome'] }) <= 1) {
         qc.invalidateQueries({ queryKey: keys.income(income.date.slice(0, 7)) })
+        qc.invalidateQueries({ queryKey: keys.report })
       }
     },
   })
@@ -226,6 +254,7 @@ export function createQueryClient(): QueryClient {
     },
     onSettled: (_d, _e, { date }: DeleteVars) => {
       qc.invalidateQueries({ queryKey: keys.income(date.slice(0, 7)) })
+      qc.invalidateQueries({ queryKey: keys.report })
     },
   })
 

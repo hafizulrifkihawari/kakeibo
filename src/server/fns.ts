@@ -33,12 +33,26 @@ import {
 import { visionOcr, visionUsage } from './vision'
 import { extractOrder } from './email-extract'
 import { checkOrder, type CheckedOrder } from '../../shared/email-check'
+import type { ReportRaw } from '../../shared/report'
+import { summarize } from './report-summary'
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const ENGINES: OcrEngine[] = ['vision', 'paddle', 'paste', 'email', 'manual']
 
 function str(v: unknown, max = 500): string {
   return typeof v === 'string' ? v.slice(0, max) : ''
+}
+
+function dateRange(from: unknown, to: unknown): { from: string; to: string } {
+  const f = str(from, 10)
+  const t = str(to, 10)
+  if (!DATE_RE.test(f) || !DATE_RE.test(t)) throw new Error('Bad date range.')
+  return { from: f, to: t }
+}
+
+function rangeInput(input: unknown): { from: string; to: string } {
+  const o = (input ?? {}) as Record<string, unknown>
+  return dateRange(o.from, o.to)
 }
 
 function credentials(input: unknown): { email: string; password: string } {
@@ -261,13 +275,7 @@ interface ExpenseRow {
 }
 
 export const listExpenses = createServerFn({ method: 'GET' })
-  .validator((input: unknown) => {
-    const o = (input ?? {}) as Record<string, unknown>
-    const from = str(o.from, 10)
-    const to = str(o.to, 10)
-    if (!DATE_RE.test(from) || !DATE_RE.test(to)) throw new Error('Bad date range.')
-    return { from, to }
-  })
+  .validator(rangeInput)
   .handler(async ({ data }): Promise<Expense[]> => {
     const user = await requireUser()
     const { results } = await env.DB.prepare(
@@ -483,16 +491,84 @@ export const deleteExpense = createServerFn({ method: 'POST' })
     return { ok: true }
   })
 
+// ── Reports ─────────────────────────────────────────────────────────────
+
+/** Sums for a report: by month and category, by income source, by store, and by item kind. */
+export const getReport = createServerFn({ method: 'GET' })
+  .validator((input: unknown) => {
+    const o = (input ?? {}) as Record<string, unknown>
+    const prev = dateRange(o.prevFrom, o.prevTo)
+    return { ...rangeInput(input), prevFrom: prev.from, prevTo: prev.to }
+  })
+  .handler(async ({ data }): Promise<ReportRaw> => {
+    const user = await requireUser()
+    const live = 'user_id = ? AND deleted_at IS NULL AND date BETWEEN ? AND ?'
+    const now = [user.id, data.from, data.to]
+    const prev = [user.id, data.prevFrom, data.prevTo]
+    const [catMonths, prevCats, incomeMonths, prevIncome, stores, kinds] = await env.DB.batch([
+      env.DB.prepare(
+        `SELECT substr(date, 1, 7) AS ym, category_id AS id, SUM(amount) AS amount FROM expenses
+         WHERE ${live} GROUP BY ym, id`,
+      ).bind(...now),
+      env.DB.prepare(
+        `SELECT category_id AS id, SUM(amount) AS amount FROM expenses WHERE ${live} GROUP BY id`,
+      ).bind(...prev),
+      env.DB.prepare(
+        `SELECT substr(date, 1, 7) AS ym, source, SUM(amount) AS amount FROM incomes
+         WHERE ${live} GROUP BY ym, source`,
+      ).bind(...now),
+      env.DB.prepare(`SELECT COALESCE(SUM(amount), 0) AS amount FROM incomes WHERE ${live}`).bind(...prev),
+      // Branches of one chain are merged on the client, so take more rows than the top 5.
+      env.DB.prepare(
+        `SELECT trim(store) AS store, SUM(amount) AS amount, COUNT(*) AS count FROM expenses
+         WHERE ${live} AND trim(COALESCE(store, '')) != ''
+         GROUP BY trim(store) ORDER BY amount DESC LIMIT 40`,
+      ).bind(...now),
+      env.DB.prepare(
+        `SELECT COALESCE(i.kind, p.kind) AS kind, SUM(i.price) AS amount FROM expense_items i
+         JOIN expenses e ON e.id = i.expense_id
+         LEFT JOIN products p ON p.id = i.product_id
+         WHERE e.user_id = ? AND e.deleted_at IS NULL AND e.date BETWEEN ? AND ?
+         GROUP BY COALESCE(i.kind, p.kind)`,
+      ).bind(...now),
+    ])
+    type Row = Record<string, unknown>
+    const rows = (r: D1Result) => r.results as Row[]
+    const num = (v: unknown) => Number(v) || 0
+    const category = (v: unknown): CategoryId => (isCategoryId(v) ? v : 'other')
+    return {
+      catMonths: rows(catMonths).map((r) => ({ ym: String(r.ym), id: category(r.id), amount: num(r.amount) })),
+      prevCategories: rows(prevCats).map((r) => ({ id: category(r.id), amount: num(r.amount) })),
+      incomeMonths: rows(incomeMonths).map((r) => ({
+        ym: String(r.ym),
+        source: isIncomeSource(r.source) ? r.source : 'other',
+        amount: num(r.amount),
+      })),
+      prevIncome: num(rows(prevIncome)[0]?.amount),
+      stores: rows(stores).map((r) => ({ store: String(r.store), amount: num(r.amount), count: num(r.count) })),
+      kinds: rows(kinds).flatMap((r) => (isItemKind(r.kind) ? [{ kind: r.kind, amount: num(r.amount) }] : [])),
+    }
+  })
+
+/** A short written review of a report by Workers AI. Gets only sums, never notes or receipt text. */
+export const summarizeReport = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => {
+    const o = (input ?? {}) as Record<string, unknown>
+    const facts = JSON.stringify(o.facts ?? null)
+    if (!facts || facts === 'null' || facts.length > 12_000) throw new Error('Bad report.')
+    return { facts }
+  })
+  .handler(async ({ data }): Promise<string[]> => {
+    await requireUser()
+    const bullets = await summarize(data.facts)
+    if (!bullets) throw new Error('The summary is not available now. Try again later.')
+    return bullets
+  })
+
 // ── Income ──────────────────────────────────────────────────────────────
 
 export const listIncome = createServerFn({ method: 'GET' })
-  .validator((input: unknown) => {
-    const o = (input ?? {}) as Record<string, unknown>
-    const from = str(o.from, 10)
-    const to = str(o.to, 10)
-    if (!DATE_RE.test(from) || !DATE_RE.test(to)) throw new Error('Bad date range.')
-    return { from, to }
-  })
+  .validator(rangeInput)
   .handler(async ({ data }): Promise<Income[]> => {
     const user = await requireUser()
     const { results } = await env.DB.prepare(

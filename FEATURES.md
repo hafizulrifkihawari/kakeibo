@@ -26,8 +26,13 @@ What Kakeibo can do now. Update this file when a change adds, removes, or change
 | Income | Edit and delete | Tap an income row to change or remove it. |
 | Income | Balance | Show income, spending, and the amount left, for each month and on Home. |
 | Budget | Monthly budget | Set a limit for all spending and for each category. The limits apply to every month. |
-| Budget | Progress | Show what you spent, what is left, the month-end projection, and how much you can spend each day. Home shows the monthly budget. |
+| Budget | Progress | Show what you spent, what is left, the month-end projection, and how much you can spend each day. Home shows the monthly budget. The projection counts rent (housing) one time and does not spread it over the month. |
 | Budget | Pace warning | Warn when the current pace goes over a limit by the month end. Show the amount over when you pass a limit. |
+| Reports | Period report | Open Reports from Home. Pick a month, the year to date, or a full year. See spending, income, net, daily average, and the share of income you kept. Each total shows the change from the last period. |
+| Reports | Charts | A month shows a running total against the budget and the month-end projection. YTD and a full year show income and spending bars for each month, with a net line. Tap a month to read its numbers. A category ring shows the share of each category. |
+| Reports | Breakdowns | Show categories with their change, budget results for each month, income by source, the top stores, and items by kind. |
+| Reports | Insights | Show short findings, also offline. Examples: the largest category changes, the months over budget, and the month-end projection. |
+| Reports | AI summary | Tap "Summarize with AI" to get a short written review. Only the totals go to the AI. The app keeps the summary until the numbers change. |
 | Prices | Product list | Show your products and their prices. |
 | Prices | Price history | Show earlier prices and the cheapest store for a product. Compare by one piece or by 100 g / 100 ml. |
 | Prices | Product kind | Set the kind of a product. Kinds include furniture and interior, hobby and gifts, and services and bills. |

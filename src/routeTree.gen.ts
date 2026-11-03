@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAddRouteImport } from './routes/_app/add'
 import { Route as AppProductsRouteImport } from './routes/_app/products'
+import { Route as AppReportRouteImport } from './routes/_app/report'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as ApiTelegramRouteImport } from './routes/api/telegram'
 import { Route as AppBudgetYmRouteImport } from './routes/_app/budget.$ym'
@@ -63,6 +64,11 @@ const AppAddRoute = AppAddRouteImport.update({
 const AppProductsRoute = AppProductsRouteImport.update({
   id: '/products',
   path: '/products',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportRoute = AppReportRouteImport.update({
+  id: '/report',
+  path: '/report',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/add': typeof AppAddRoute
   '/products': typeof AppProductsRoute
+  '/report': typeof AppReportRoute
   '/settings': typeof AppSettingsRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/budget/$ym': typeof AppBudgetYmRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/add': typeof AppAddRoute
   '/products': typeof AppProductsRoute
+  '/report': typeof AppReportRoute
   '/settings': typeof AppSettingsRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/': typeof AppIndexRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_app/add': typeof AppAddRoute
   '/_app/products': typeof AppProductsRoute
+  '/_app/report': typeof AppReportRoute
   '/_app/settings': typeof AppSettingsRoute
   '/api/telegram': typeof ApiTelegramRoute
   '/_app/': typeof AppIndexRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/add'
     | '/products'
+    | '/report'
     | '/settings'
     | '/api/telegram'
     | '/budget/$ym'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/add'
     | '/products'
+    | '/report'
     | '/settings'
     | '/api/telegram'
     | '/'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_app/add'
     | '/_app/products'
+    | '/_app/report'
     | '/_app/settings'
     | '/api/telegram'
     | '/_app/'
@@ -281,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/report': {
+      id: '/_app/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof AppReportRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -343,6 +362,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAddRoute: typeof AppAddRoute
   AppProductsRoute: typeof AppProductsRoute
+  AppReportRoute: typeof AppReportRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppBudgetYmRoute: typeof AppBudgetYmRoute
@@ -356,6 +376,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAddRoute: AppAddRoute,
   AppProductsRoute: AppProductsRoute,
+  AppReportRoute: AppReportRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppBudgetYmRoute: AppBudgetYmRoute,

@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { addMonths, isoDate, isoMonth, yen } from '../../client/format'
-import { budgetsQuery, incomeQuery, monthQuery } from '../../client/queries'
+import { budgetsQuery, incomeQuery, monthQuery, reportQuery } from '../../client/queries'
+import { buildReport, periodRange } from '../../../shared/report'
+import { ONCE_A_MONTH } from '../../../shared/budget'
 import { BudgetMeter, Empty, ExpenseRow } from '../../components/bits'
 import { WeekBars } from '../../components/charts'
 
@@ -19,9 +21,13 @@ function Home() {
   const today = isoDate()
   const todayTotal = list.filter((e) => e.date === today).reduce((s, e) => s + e.amount, 0)
   const monthTotal = list.reduce((s, e) => s + e.amount, 0)
+  const once = list.filter((e) => ONCE_A_MONTH.includes(e.categoryId)).reduce((s, e) => s + e.amount, 0)
   const avg = Math.round(monthTotal / new Date().getDate())
   const incomeTotal = (income.data ?? []).reduce((s, i) => s + i.amount, 0)
   const totalLimit = budgets.data?.find((b) => b.scope === 'total')?.amount ?? 0
+  const ytdRange = periodRange({ kind: 'ytd' }, today)
+  const ytdRaw = useQuery(reportQuery(ytdRange))
+  const ytd = ytdRaw.data ? buildReport(ytdRange, ytdRaw.data) : null
   const recent = [...list].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5)
 
   return (
@@ -49,7 +55,7 @@ function Home() {
           </span>
         </div>
         {totalLimit ? (
-          <BudgetMeter ym={ym} limit={totalLimit} spent={monthTotal} detail />
+          <BudgetMeter ym={ym} limit={totalLimit} spent={monthTotal} once={once} detail />
         ) : (
           <div className="muted small">Set a monthly budget to see what is left and your pace.</div>
         )}
@@ -71,6 +77,27 @@ function Home() {
             <div className="label">Left</div>
             <div className="value num" style={incomeTotal - monthTotal < 0 ? { color: 'var(--danger)' } : undefined}>
               {yen(incomeTotal - monthTotal)}
+            </div>
+          </div>
+        </div>
+      </Link>
+
+      <Link to="/report" search={{ p: 'ytd' }} className="card" style={{ display: 'block', color: 'inherit' }}>
+        <div className="spread" style={{ marginBottom: 12 }}>
+          <span style={{ fontWeight: 500 }}>Reports</span>
+          <span className="small" style={{ color: 'var(--link)' }}>
+            Month, year, charts →
+          </span>
+        </div>
+        <div className="stat-grid">
+          <div className="stat">
+            <div className="label">Spent this year</div>
+            <div className="value num">{ytd ? yen(ytd.spent) : '—'}</div>
+          </div>
+          <div className="stat">
+            <div className="label">Net this year</div>
+            <div className="value num" style={ytd && ytd.income - ytd.spent < 0 ? { color: 'var(--danger)' } : undefined}>
+              {ytd ? yen(ytd.income - ytd.spent) : '—'}
             </div>
           </div>
         </div>

@@ -61,7 +61,4 @@ export function uuid(): string {
   return crypto.randomUUID()
 }
 
-/** The chain part of a store name: "ライフ 千本店" → "ライフ". */
-export function shortStore(store: string): string {
-  return store.trim().split(/\s+/)[0] ?? ''
-}
+export { storeChain as shortStore } from '../../shared/report'

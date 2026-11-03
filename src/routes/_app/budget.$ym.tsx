@@ -2,7 +2,7 @@ import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { CATEGORIES } from '../../../shared/categories'
-import type { Budget, BudgetScope } from '../../../shared/budget'
+import { ONCE_A_MONTH, type Budget, type BudgetScope } from '../../../shared/budget'
 import { addMonths, monthLabel } from '../../client/format'
 import { budgetsQuery, monthQuery } from '../../client/queries'
 import { BudgetMeter, CategoryDot, MoneyInput } from '../../components/bits'
@@ -34,6 +34,7 @@ function BudgetView() {
   const list = month.data ?? []
   const total = list.reduce((s, e) => s + e.amount, 0)
   const byCat = sumBy(list, (e) => e.categoryId)
+  const once = ONCE_A_MONTH.reduce((s, id) => s + (byCat.get(id) ?? 0), 0)
   const go = (delta: number) => navigate({ params: { ym: addMonths(ym, delta) } })
 
   return (
@@ -60,7 +61,7 @@ function BudgetView() {
               </button>
             </div>
             {limits.get('total') ? (
-              <BudgetMeter ym={ym} limit={limits.get('total')!} spent={total} detail />
+              <BudgetMeter ym={ym} limit={limits.get('total')!} spent={total} once={once} detail />
             ) : (
               <p className="muted small" style={{ margin: 0 }}>
                 No monthly budget yet. Tap Edit to set one.
@@ -79,7 +80,13 @@ function BudgetView() {
                       {c.en}
                       <span className="ja">{c.ja}</span>
                     </div>
-                    <BudgetMeter ym={ym} limit={limits.get(c.id)!} spent={byCat.get(c.id) ?? 0} color={c.color} />
+                    <BudgetMeter
+                      ym={ym}
+                      limit={limits.get(c.id)!}
+                      spent={byCat.get(c.id) ?? 0}
+                      once={ONCE_A_MONTH.includes(c.id) ? (byCat.get(c.id) ?? 0) : 0}
+                      color={c.color}
+                    />
                   </div>
                 </div>
               ))}

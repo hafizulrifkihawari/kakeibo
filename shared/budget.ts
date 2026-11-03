@@ -35,13 +35,22 @@ export interface BudgetStatus {
   pace: BudgetPace
 }
 
+/** Paid once a month, often on day 1. A projection does not spread these over the days. */
+export const ONCE_A_MONTH: CategoryId[] = ['housing']
+
+/** The month total if the spending continues at its daily pace. `once` (rent) is counted one time. */
+export function projectMonth(spent: number, once: number, day: number, days: number): number {
+  const d = Math.min(Math.max(day, 1), days)
+  return Math.round(once + ((spent - once) / d) * days)
+}
+
 /**
  * The state of one limit on day `day` of a month with `days` days.
  * For a past month, pass day = days. Then the projection is the real total.
+ * `once` is the part of `spent` that is paid once a month (see ONCE_A_MONTH).
  */
-export function budgetStatus(limit: number, spent: number, day: number, days: number): BudgetStatus {
-  const d = Math.min(Math.max(day, 1), days)
-  const projected = Math.round((spent / d) * days)
+export function budgetStatus(limit: number, spent: number, day: number, days: number, once = 0): BudgetStatus {
+  const projected = projectMonth(spent, once, day, days)
   const pace: BudgetPace = spent > limit ? 'over' : projected > limit ? 'fast' : 'ok'
   return { limit, spent, remaining: limit - spent, projected, used: limit > 0 ? spent / limit : 0, pace }
 }

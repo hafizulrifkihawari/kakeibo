@@ -16,6 +16,10 @@ describe('budgetStatus', () => {
     expect(budgetStatus(10_000, 12_000, 20, 30)).toMatchObject({ remaining: -2_000, pace: 'over' })
   })
 
+  it('counts rent one time in the projection', () => {
+    expect(budgetStatus(150_000, 70_000, 4, 30, 62_000)).toMatchObject({ projected: 122_000, pace: 'ok' })
+  })
+
   it('uses the real total for a past month', () => {
     expect(budgetStatus(50_000, 45_000, 31, 31).projected).toBe(45_000)
   })

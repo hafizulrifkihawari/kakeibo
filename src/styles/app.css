@@ -42,6 +42,10 @@
   --cat-gifts: #d36fb2;
   --cat-other: #a3a3a3;
 
+  /* Report charts. Checked for color-blind separation and 3:1 contrast on --surface. */
+  --income: #2f9e8f;
+  --spend: #e04f33;
+
   --radius: 22px;
   --radius-sm: 12px;
   --tap: 48px;
@@ -1094,6 +1098,278 @@ textarea.input {
 .price-chart .dot.min {
   fill: var(--price-down);
   stroke: var(--price-down);
+}
+
+/* ── Reports ────────────────────────────────────────────────────────── */
+
+.chips.seg {
+  flex-wrap: nowrap;
+}
+
+.chips.seg .chip {
+  flex: 1;
+  justify-content: center;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+
+.chart .grid {
+  stroke: var(--line);
+  stroke-dasharray: 3 3;
+}
+
+.chart .base {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.chart .axis {
+  fill: var(--muted);
+  font-size: 11px;
+  font-family: var(--font);
+}
+
+.chart .axis.on {
+  fill: var(--text);
+  font-weight: 600;
+}
+
+.chart .sel-band {
+  fill: var(--surface-2);
+}
+
+.chart .hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.chart .net {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.chart .net-dot,
+.chart .end-dot {
+  fill: var(--surface);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.chart .end-dot {
+  stroke: var(--spend);
+}
+
+.chart .spend-line {
+  fill: none;
+  stroke: var(--spend);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart .projection {
+  stroke: var(--spend);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+  opacity: 0.7;
+}
+
+.chart .limit {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.chart .pace {
+  stroke: var(--line);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 4;
+}
+
+.chart .crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--muted);
+}
+
+.chart-legend .swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+
+.chart-legend .swatch.line {
+  height: 3px;
+  width: 14px;
+  vertical-align: 3px;
+}
+
+.readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 8px 0 4px;
+  min-height: 1.5em;
+}
+
+.chart-table summary {
+  cursor: pointer;
+  color: var(--link);
+  margin-top: 8px;
+}
+
+.chart-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.chart-table th,
+.chart-table td {
+  padding: 4px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+.chart-table th:first-child,
+.chart-table td:first-child {
+  text-align: left;
+}
+
+.donut {
+  display: block;
+  width: min(180px, 60%);
+  height: auto;
+  margin: 0 auto 12px;
+}
+
+.donut-track {
+  fill: none;
+  stroke: var(--surface-2);
+  stroke-width: 24;
+}
+
+.donut-part {
+  fill: none;
+  stroke-width: 24;
+}
+
+.donut-total {
+  fill: var(--text);
+  font: 600 20px var(--font);
+}
+
+.donut-label {
+  fill: var(--muted);
+  font: 12px var(--font);
+}
+
+.rank-row {
+  cursor: default;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.rank-row {
+  cursor: pointer;
+}
+
+a.rank-row:hover {
+  background: var(--surface-2);
+}
+
+.rank-icon {
+  width: 36px;
+  text-align: center;
+  font-size: 1.25rem;
+}
+
+.ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.delta {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.insights {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.insights li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.ai-summary {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--line);
+  display: grid;
+  gap: 8px;
+}
+
+.budget-months {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.budget-month {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 0;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.budget-month.ok {
+  background: color-mix(in srgb, var(--price-down) 22%, var(--surface));
+}
+
+.budget-month.fast {
+  background: var(--warn-bg);
+}
+
+.budget-month.over {
+  background: var(--danger);
+  color: var(--danger-ink);
+}
+
+.budget-month.future {
+  border-style: dashed;
+  border-color: var(--line);
+  color: var(--muted);
 }
 
 .sr-only {

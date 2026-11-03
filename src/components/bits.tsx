@@ -249,18 +249,21 @@ export function BudgetMeter({
   spent,
   color = 'var(--accent)',
   detail = false,
+  once = 0,
 }: {
   ym: string
   limit: number
   spent: number
   color?: string
   detail?: boolean
+  /** The part of `spent` paid once a month, such as rent. The projection counts it one time. */
+  once?: number
 }) {
   const days = daysInMonth(ym)
   const now = isoMonth()
   // A past month is complete. A future month has no days passed yet.
   const day = ym < now ? days : ym > now ? 1 : new Date().getDate()
-  const s = budgetStatus(limit, spent, day, days)
+  const s = budgetStatus(limit, spent, day, days, once)
   const fill = s.pace === 'over' ? 'var(--danger)' : s.pace === 'fast' ? 'var(--warn-ink)' : color
   return (
     <div className="budget-meter">
