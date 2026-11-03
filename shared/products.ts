@@ -21,6 +21,9 @@ export const ITEM_KINDS = [
   { id: 'pet', en: 'Pet supplies', ja: 'ペット用品', icon: '🐾' },
   { id: 'stationery', en: 'Stationery', ja: '文具', icon: '✏️' },
   { id: 'electronics', en: 'Electronics', ja: '家電・電子機器', icon: '🔌' },
+  { id: 'furniture', en: 'Furniture & interior', ja: '家具・インテリア', icon: '🛋️' },
+  { id: 'hobby_gifts', en: 'Hobby & gifts', ja: '趣味・ギフト', icon: '🎁' },
+  { id: 'services', en: 'Services & bills', ja: 'サービス・料金', icon: '🧾' },
   { id: 'other', en: 'Other', ja: 'その他', icon: '📦' },
 ] as const
 

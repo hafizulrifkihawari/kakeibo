@@ -41,7 +41,6 @@ export const KNOWN_STORES: KnownStore[] = [
   { name: 'ダイソー', match: /ダイソー|DAISO/i, category: 'daily' },
   { name: 'セリア', match: /セリア|Seria/i, category: 'daily' },
   { name: '無印良品', match: /無印良品|MUJI/i, category: 'daily' },
-  { name: 'ニトリ', match: /ニトリ|NITORI/i, category: 'daily' },
   { name: 'ドン・キホーテ', match: /ドン[・.]?キホーテ|ドンキ/, category: 'daily' },
   { name: 'ユニクロ', match: /ユニクロ|UNIQLO/i, category: 'clothing' },
   { name: 'GU', match: /\bGU\b|ジーユー/, category: 'clothing' },
@@ -60,8 +59,10 @@ export const KNOWN_STORES: KnownStore[] = [
   { name: 'JR', match: /JR東日本|JR西日本|JR東海|旅客鉄道/, category: 'transport' },
   { name: '東京メトロ', match: /東京メトロ|Tokyo\s*Metro/i, category: 'transport' },
   { name: 'タクシー', match: /タクシー|TAXI/i, category: 'transport' },
-  { name: 'ビックカメラ', match: /ビックカメラ/, category: 'entertainment' },
-  { name: 'ヨドバシカメラ', match: /ヨドバシ/, category: 'entertainment' },
+  { name: 'ニトリ', match: /ニトリ|NITORI/i, category: 'furniture' },
+  { name: 'IKEA', match: /IKEA|イケア/i, category: 'furniture' },
+  { name: 'ビックカメラ', match: /ビックカメラ/, category: 'furniture' },
+  { name: 'ヨドバシカメラ', match: /ヨドバシ/, category: 'furniture' },
   { name: 'TSUTAYA', match: /TSUTAYA|ツタヤ/i, category: 'entertainment' },
 ]
 
@@ -69,6 +70,9 @@ export const KNOWN_STORES: KnownStore[] = [
 const KEYWORDS: [RegExp, CategoryId][] = [
   [/薬|処方|医院|クリニック|病院|歯科|調剤/, 'medical'],
   [/乗車|運賃|切符|乗車券|定期|IC|Suica|PASMO|駐車|ガソリン|給油/i, 'transport'],
+  [/家賃|賃料|管理費|共益費|火災保険|家財保険|\bRent\b/i, 'housing'],
+  [/家具|ベッド|マットレス|ソファ|カーテン|照明|掃除機|冷蔵庫|洗濯機|電子レンジ/, 'furniture'],
+  [/みやげ|土産|ギフト|プレゼント|ご祝儀|香典/, 'gifts'],
   [/電気|ガス料金|水道|電話料金|通信料/, 'utilities'],
   [/映画|チケット|入場|カラオケ|ゲーム|書籍|書店|雑誌|コミック/, 'entertainment'],
   [/シャツ|パンツ|靴|ソックス|ジャケット|衣料/, 'clothing'],

@@ -267,6 +267,9 @@ const DATA: Record<ItemKind, string> = {
   pet: '',
   stationery: '',
   electronics: '',
+  furniture: '',
+  hobby_gifts: '',
+  services: '',
   other: '',
 }
 

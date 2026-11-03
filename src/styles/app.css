@@ -32,11 +32,14 @@
   --cat-dining: #df9a4a;
   --cat-konbini: #5f9fd6;
   --cat-daily: #a58fd6;
+  --cat-furniture: #9a8a4a;
   --cat-transport: #4f99a8;
   --cat-medical: #e0777d;
   --cat-clothing: #c3925f;
   --cat-entertainment: #e6b53a;
+  --cat-housing: #6c6fc4;
   --cat-utilities: #8592a8;
+  --cat-gifts: #d36fb2;
   --cat-other: #a3a3a3;
 
   --radius: 22px;

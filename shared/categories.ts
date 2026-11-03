@@ -3,11 +3,14 @@ export type CategoryId =
   | 'dining'
   | 'konbini'
   | 'daily'
+  | 'furniture'
   | 'transport'
   | 'medical'
   | 'clothing'
   | 'entertainment'
+  | 'housing'
   | 'utilities'
+  | 'gifts'
   | 'other'
 
 export interface Category {
@@ -24,11 +27,14 @@ export const CATEGORIES: Category[] = [
   { id: 'dining', ja: '外食', en: 'Dining', icon: '🍜', color: 'var(--cat-dining)' },
   { id: 'konbini', ja: 'コンビニ', en: 'Konbini', icon: '🏪', color: 'var(--cat-konbini)' },
   { id: 'daily', ja: '日用品', en: 'Daily goods', icon: '🧴', color: 'var(--cat-daily)' },
+  { id: 'furniture', ja: '家具・家電', en: 'Furniture', icon: '🛋️', color: 'var(--cat-furniture)' },
   { id: 'transport', ja: '交通', en: 'Transport', icon: '🚃', color: 'var(--cat-transport)' },
   { id: 'medical', ja: '医療', en: 'Medical', icon: '💊', color: 'var(--cat-medical)' },
   { id: 'clothing', ja: '衣服', en: 'Clothing', icon: '👕', color: 'var(--cat-clothing)' },
   { id: 'entertainment', ja: '娯楽', en: 'Fun', icon: '🎮', color: 'var(--cat-entertainment)' },
+  { id: 'housing', ja: '住居', en: 'Housing', icon: '🏠', color: 'var(--cat-housing)' },
   { id: 'utilities', ja: '公共料金', en: 'Utilities', icon: '💡', color: 'var(--cat-utilities)' },
+  { id: 'gifts', ja: '交際・お土産', en: 'Gifts', icon: '🎁', color: 'var(--cat-gifts)' },
   { id: 'other', ja: 'その他', en: 'Other', icon: '📦', color: 'var(--cat-other)' },
 ]
 
