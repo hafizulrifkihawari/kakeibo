@@ -749,12 +749,13 @@ textarea.input {
   width: 60px;
   height: 60px;
   margin-top: -22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   border-radius: 999px;
   border: 3px solid var(--ink);
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: 2rem;
-  line-height: 1;
   box-shadow: 0 5px 0 var(--ink);
   cursor: pointer;
   transition: transform 0.1s, box-shadow 0.1s;
