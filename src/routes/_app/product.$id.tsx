@@ -1,7 +1,17 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ITEM_KINDS, KIND_BY_ID, perLabel, type ItemKind, type Purchase } from '../../../shared/products'
-import { yen } from '../../client/format'
+import {
+  ITEM_KINDS,
+  KIND_BY_ID,
+  perKgText,
+  perLabel,
+  priceTrend,
+  statsFor,
+  storeStats,
+  type ItemKind,
+  type Purchase,
+} from '../../../shared/products'
+import { isoDate, yen } from '../../client/format'
 import { keys, productQuery } from '../../client/queries'
 import { setProductKind } from '../../server/fns'
 import { Empty } from '../../components/bits'
@@ -16,19 +26,6 @@ export const Route = createFileRoute('/_app/product/$id')({
   },
   component: ProductView,
 })
-
-/** The lowest price at each store, cheapest first. */
-function byStore(list: Purchase[]): { store: string; min: number; count: number }[] {
-  const m = new Map<string, { store: string; min: number; count: number }>()
-  for (const p of list) {
-    const store = p.store || '—'
-    const s = m.get(store) ?? { store, min: Infinity, count: 0 }
-    s.min = Math.min(s.min, p.price)
-    s.count++
-    m.set(store, s)
-  }
-  return [...m.values()].sort((a, b) => a.min - b.min)
-}
 
 function ProductView() {
   const id = Number(Route.useParams().id)
@@ -61,9 +58,12 @@ function ProductView() {
   const basis = last?.basis ?? 'pc'
   const comparable = purchases.filter((p) => (p.prices[basis] ?? 0) > 0).map((p) => ({ ...p, price: p.prices[basis]! }))
   const prices = comparable.map((p) => p.price)
-  const min = Math.min(...prices)
-  const avg = prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0
-  const stores = byStore(comparable)
+  const stats = statsFor(purchases, basis)
+  const min = stats?.minPrice ?? 0
+  const avg = stats?.avgPrice ?? 0
+  const stores = storeStats(purchases, basis)
+  const trend = priceTrend(purchases, basis, isoDate())
+  const kgText = perKgText(stats?.recentAvg ?? 0, basis)
   // The newest purchase at the lowest price.
   const cheapestAt = comparable.find((p) => p.price === min) ?? last
   const per = basis !== 'pc' || comparable.some((p) => p.qty > 1) ? perLabel(basis) : ''
@@ -129,6 +129,18 @@ function ProductView() {
               <div className="value num">{purchases.length}×</div>
             </div>
           </div>
+          {(trend !== null || kgText) && (
+            <div className="muted small">
+              {trend !== null && (
+                <span className={trend > 0 ? 'price-up' : trend < 0 ? 'price-down' : undefined}>
+                  {trend === 0 ? 'No change' : `${trend > 0 ? 'Up' : 'Down'} ${Math.abs(trend)}%`} in the
+                  last 3 months
+                </span>
+              )}
+              {trend !== null && kgText && ' · '}
+              {kgText && <>Usual {kgText}</>}
+            </div>
+          )}
           {prices.length > 1 && <PriceChart purchases={comparable} />}
           {comparable.length < purchases.length && (
             <div className="muted small">
@@ -140,7 +152,7 @@ function ProductView() {
 
       {stores.length > 1 && (
         <section>
-          <div className="section-label">Lowest price at each store{per && ` (${per.trim()})`}</div>
+          <div className="section-label">Average price at each store{per && ` (${per.trim()})`}</div>
           <div className="list">
             {stores.map((s, i) => (
               <div key={s.store} className="list-row">
@@ -149,9 +161,11 @@ function ProductView() {
                     {i === 0 && <span aria-label="Cheapest">🏆 </span>}
                     {s.store}
                   </div>
-                  <div className="sub">{s.count}×</div>
+                  <div className="sub num">
+                    {s.count}× · lowest {yen(s.min)} · last {s.lastDate.slice(5).replace('-', '/')}
+                  </div>
                 </div>
-                <div className={`amount num${i === 0 ? ' price-down' : ''}`}>{yen(s.min)}</div>
+                <div className={`amount num${i === 0 ? ' price-down' : ''}`}>{yen(s.avg)}</div>
               </div>
             ))}
           </div>

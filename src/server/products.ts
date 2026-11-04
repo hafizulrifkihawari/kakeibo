@@ -31,6 +31,10 @@ export interface ProductSummary {
   basis: MeasureUnit
   lastPrice: number | null
   minPrice: number | null
+  /** The usual price now: the average of the newest purchases. */
+  recentAvg: number | null
+  /** Purchases that compare by `basis`. */
+  basisCount: number
   lastDate: string
   lastStore: string
   minStore: string
@@ -225,6 +229,8 @@ export async function listProducts(userId: number): Promise<ProductSummary[]> {
         basis: list[0]?.basis ?? 'pc',
         lastPrice: st?.lastPrice ?? null,
         minPrice: st?.minPrice ?? null,
+        recentAvg: st?.recentAvg ?? null,
+        basisCount: st?.count ?? 0,
         lastDate: list[0]?.date ?? '',
         lastStore: st?.last.store ?? '',
         minStore: st?.min.store ?? '',

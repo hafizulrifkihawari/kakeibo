@@ -13,6 +13,7 @@ import {
   parseSize,
   perLabel,
   primaryBasis,
+  priceVerdict,
   productKey,
   sizeText,
   type ItemKind,
@@ -98,13 +99,38 @@ function shortDate(iso: string): string {
 
 /** "↑ ¥20 vs last time (10/1 · LIFE)" and the cheapest earlier price. All prices are unit prices. */
 function PriceCompare({ price, stats, per }: { price: number; stats: UnitStats; per: string }) {
-  const { last, min, lastPrice, minPrice } = stats
+  const { last, min, lastPrice, minPrice, recentAvg } = stats
   const diff = price - lastPrice
+  const verdict = price > 0 ? priceVerdict(price, stats) : null
   const where = (p: { date: string; store: string }) =>
     [shortDate(p.date), shortStore(p.store)].filter(Boolean).join(' · ')
   const at = (p: { date: string; store: string }) => (p.store ? `at ${shortStore(p.store)}` : `on ${shortDate(p.date)}`)
   return (
     <>
+      {verdict?.level === 'lowest' && (
+        <span className="price-down">
+          ★ Lowest price so far (before: {yen(minPrice)}
+          {per} {at(min)})
+        </span>
+      )}
+      {verdict?.level === 'good' && (
+        <span className="price-down">
+          Good price: {-verdict.pct}% under your usual {yen(recentAvg)}
+          {per}
+        </span>
+      )}
+      {verdict?.level === 'high' && (
+        <span className="price-up">
+          High: {verdict.pct}% more than your usual {yen(recentAvg)}
+          {per}
+        </span>
+      )}
+      {verdict?.level === 'normal' && (
+        <span className="price-same">
+          Normal price (usual {yen(recentAvg)}
+          {per})
+        </span>
+      )}
       {diff === 0 ? (
         <span className="price-same">= same as last time ({where(last)})</span>
       ) : (
@@ -117,12 +143,6 @@ function PriceCompare({ price, stats, per }: { price: number; stats: UnitStats; 
         <span className="price-same">
           Cheapest {yen(minPrice)}
           {per} {at(min)}
-        </span>
-      )}
-      {price > 0 && minPrice > price && (
-        <span className="price-down">
-          ★ Lowest price so far (before: {yen(minPrice)}
-          {per} {at(min)})
         </span>
       )}
       {price > 0 && minPrice === price && diff !== 0 && (

@@ -135,6 +135,10 @@ export interface UnitStats {
   min: Purchase
   lastPrice: number
   minPrice: number
+  /** Average of all purchases. */
+  avgPrice: number
+  /** Average of the newest RECENT_COUNT purchases: the usual price now. */
+  recentAvg: number
 }
 
 export interface PriceStats {
@@ -145,13 +149,122 @@ export interface PriceStats {
   byUnit: Partial<Record<MeasureUnit, UnitStats>>
 }
 
-/** The newest purchase and the cheapest one by `basis`, from a list sorted newest first. */
+/** Purchases in the "usual price" average. */
+export const RECENT_COUNT = 5
+/** A price this far from the usual price is good or high. */
+export const VERDICT_PCT = 10
+
+function average(prices: number[]): number {
+  return prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0
+}
+
+/** The newest purchase, the cheapest one, and the averages by `basis`, from a list sorted newest first. */
 export function statsFor(list: Purchase[], basis: MeasureUnit): UnitStats | null {
   const same = list.filter((p) => (p.prices[basis] ?? 0) > 0)
   if (!same.length) return null
   let min = same[0]
   for (const p of same) if (p.prices[basis]! < min.prices[basis]!) min = p
-  return { count: same.length, last: same[0], min, lastPrice: same[0].prices[basis]!, minPrice: min.prices[basis]! }
+  const prices = same.map((p) => p.prices[basis]!)
+  return {
+    count: same.length,
+    last: same[0],
+    min,
+    lastPrice: prices[0],
+    minPrice: min.prices[basis]!,
+    avgPrice: average(prices),
+    recentAvg: average(prices.slice(0, RECENT_COUNT)),
+  }
+}
+
+export type VerdictLevel = 'lowest' | 'good' | 'normal' | 'high' | 'new'
+
+export interface Verdict {
+  level: VerdictLevel
+  /** Rounded % difference from the usual price. Negative is cheaper. */
+  pct: number
+}
+
+/** How a price compares with the usual price. One earlier purchase is not enough to judge. */
+export function priceVerdict(
+  price: number,
+  stats: Pick<UnitStats, 'count' | 'minPrice' | 'recentAvg'>,
+): Verdict {
+  // Judge by the exact difference; round it only for display.
+  const exact = stats.recentAvg ? ((price - stats.recentAvg) / stats.recentAvg) * 100 : 0
+  const pct = Math.round(exact)
+  if (stats.count < 2) return { level: 'new', pct }
+  if (price < stats.minPrice) return { level: 'lowest', pct }
+  if (exact <= -VERDICT_PCT) return { level: 'good', pct }
+  if (exact >= VERDICT_PCT) return { level: 'high', pct }
+  return { level: 'normal', pct }
+}
+
+export interface StoreStats {
+  store: string
+  count: number
+  min: number
+  avg: number
+  last: number
+  lastDate: string
+}
+
+/** Prices at each store by `basis`, cheapest average first. `list` is sorted newest first. */
+export function storeStats(list: Purchase[], basis: MeasureUnit): StoreStats[] {
+  const m = new Map<string, number[]>()
+  const first = new Map<string, Purchase>()
+  for (const p of list) {
+    const price = p.prices[basis]
+    if (!price) continue
+    const store = p.store || '—'
+    m.set(store, [...(m.get(store) ?? []), price])
+    if (!first.has(store)) first.set(store, p)
+  }
+  return [...m]
+    .map(([store, prices]) => ({
+      store,
+      count: prices.length,
+      min: Math.min(...prices),
+      avg: average(prices),
+      last: prices[0],
+      lastDate: first.get(store)!.date,
+    }))
+    .sort((a, b) => a.avg - b.avg)
+}
+
+/** The month YYYY-MM, `n` months before `ym`. */
+function monthsBack(ym: string, n: number): string {
+  const [y, m] = ym.split('-').map(Number)
+  const t = y * 12 + (m - 1) - n
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, '0')}`
+}
+
+/**
+ * % change of the average price in the last 3 months (this month too) against the 3 months
+ * before. Null when either window has no purchase.
+ */
+export function priceTrend(list: Purchase[], basis: MeasureUnit, today: string): number | null {
+  const ym = today.slice(0, 7)
+  const recentFrom = monthsBack(ym, 2)
+  const olderFrom = monthsBack(ym, 5)
+  const recent: number[] = []
+  const older: number[] = []
+  for (const p of list) {
+    const price = p.prices[basis]
+    if (!price) continue
+    const m = p.date.slice(0, 7)
+    if (m > ym) continue
+    if (m >= recentFrom) recent.push(price)
+    else if (m >= olderFrom) older.push(price)
+  }
+  if (!recent.length || !older.length) return null
+  const before = average(older)
+  return Math.round(((average(recent) - before) / before) * 100)
+}
+
+/** A price per 100 g or 100 ml, as yen per kg or per litre: "¥1,330/kg". Null for a price per piece. */
+export function perKgText(price: number, basis: MeasureUnit): string | null {
+  if (basis === 'pc') return null
+  return `¥${new Intl.NumberFormat('ja-JP').format(price * 10)}/${basis === 'g' ? 'kg' : 'L'}`
 }
 
 // Lines that are clearly not something you buy. Anything else is tracked as a product.

@@ -6,6 +6,7 @@ import { shortStore, yen } from '../../client/format'
 import { keys, productsQuery } from '../../client/queries'
 import { linkOldItems } from '../../server/fns'
 import { Empty, useOnline } from '../../components/bits'
+import { BuyCheck } from '../../components/BuyCheck'
 
 export const Route = createFileRoute('/_app/products')({ component: Products })
 
@@ -15,6 +16,7 @@ function Products() {
   const q = useQuery(productsQuery)
   const [search, setSearch] = useState('')
   const [kind, setKind] = useState<ItemKind | undefined>()
+  const [checking, setChecking] = useState(false)
 
   // Items saved before product tracking get linked in the background, 30 names per call.
   const link = useMutation({
@@ -43,6 +45,12 @@ function Products() {
   return (
     <main className="page stack">
       <h1 className="page-title">Products</h1>
+      {!!q.data?.length && (
+        <button type="button" className="btn btn-primary btn-block" onClick={() => setChecking(true)}>
+          <span aria-hidden>🛒</span> Should I buy this?
+        </button>
+      )}
+      <BuyCheck open={checking} onClose={() => setChecking(false)} />
       <input
         className="input"
         type="search"

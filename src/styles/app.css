@@ -445,8 +445,9 @@ textarea.input {
   border-bottom: 0;
 }
 
-/* An income row is a button that opens the row in the form. */
-.income-row {
+/* A list row that is a button: an income row opens the form, a product row picks the product. */
+.income-row,
+.row-button {
   width: 100%;
   border: 0;
   border-bottom: 2px dashed var(--line);

@@ -13,7 +13,7 @@ What Kakeibo can do now. Update this file when a change adds, removes, or change
 | Add | Offline reading | Receipts are read on the phone when Google Vision is over its limit, fails, or there is no network. |
 | Expense form | Items | Edit each line. Each item shows its furigana reading and an English translation. |
 | Expense form | Products | Link an item to a product, with quantity, unit (pieces, g, ml), pack size, and kind. |
-| Expense form | Price check | Compare each price with your earlier purchases of the same product. |
+| Expense form | Price check | Compare each price with your earlier purchases of the same product. Say if the price is the lowest so far, good, normal, or high against your usual price (the average of your last 5 purchases). |
 | Expense form | Other costs | Add tax, shipping, fees, and discounts. These are not products. |
 | Expense form | Tax help | Read added tax (外税) from the receipt. Offer "Add as tax" when the total is a little more than the items. |
 | Expense form | Thousand separators | Show a "." between thousands in every money field, such as 1.250.000. This also applies to income and budget fields. |
@@ -35,7 +35,8 @@ What Kakeibo can do now. Update this file when a change adds, removes, or change
 | Reports | Insights | Show short findings, also offline. Examples: the largest category changes, the months over budget, and the month-end projection. |
 | Reports | AI summary | Tap "Summarize with AI" to get a short written review. Only the totals go to the AI. The app keeps the summary until the numbers change. |
 | Prices | Product list | Show your products and their prices. |
-| Prices | Price history | Show earlier prices and the cheapest store for a product. Compare by one piece or by 100 g / 100 ml. |
+| Prices | Price history | Show earlier prices for a product, with the average, the lowest, and the last price at each store. Show the price change in the last 3 months. Compare by one piece or by 100 g / 100 ml, and show the price for each kg or litre. |
+| Prices | Should I buy this? | Pick a product and enter the shelf price (and the pack size for food sold by weight). See if the price is good, normal, or high for you, and which store is usually cheaper. Works offline. Saves nothing. |
 | Prices | Product kind | Set the kind of a product. Kinds include furniture and interior, hobby and gifts, and services and bills. |
 | Account | Register and log in | Use an email address and a password. |
 | Account | Change password | Set a new password. Other devices are logged out. |
