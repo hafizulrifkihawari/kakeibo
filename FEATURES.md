@@ -18,6 +18,7 @@ What Kakeibo can do now. Update this file when a change adds, removes, or change
 | Expense form | Tax help | Read added tax (外税) from the receipt. Offer "Add as tax" when the total is a little more than the items. |
 | Expense form | Thousand separators | Show a "." between thousands in every money field, such as 1.250.000. This also applies to income and budget fields. |
 | Expense form | Category | Suggest a category from your rules, store chains, and item words. Learn a rule when you change it. Categories include housing (rent), furniture and appliances, and gifts and souvenirs. |
+| Expense form | Duplicate warning | Warn before you save an expense with the same amount, a date within 1 day, and a similar store. Link to the earlier expense. |
 | Expense form | Edit and delete | Change or remove an expense that you saved. |
 | Spending | Home | Show today's total, this month's total, the daily average, the last 7 days, and recent expenses. |
 | Spending | Calendar | Show a month grid and totals by category. Tap a category to filter. Swipe to change the month. |

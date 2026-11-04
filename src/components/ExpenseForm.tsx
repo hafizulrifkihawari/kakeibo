@@ -1,9 +1,10 @@
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQueries, useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { CATEGORY_BY_ID, type CategoryId } from '../../shared/categories'
 import type { CategoryRule } from '../../shared/categorizer'
 import { CHARGE_BY_ID, CHARGE_KINDS, type ChargeKind, type ExpenseCharge } from '../../shared/charges'
 import type { Expense } from '../../shared/types'
+import { findDuplicate } from '../../shared/duplicates'
 import { glossKey, hasKanji, type Gloss } from '../../shared/gloss'
 import {
   ITEM_KINDS,
@@ -19,9 +20,16 @@ import {
   type PriceStats,
   type UnitStats,
 } from '../../shared/products'
-import { glossQuery, priceStatsQuery, productsQuery, type DeleteVars, type SaveVars } from '../client/queries'
+import {
+  glossQuery,
+  monthQuery,
+  priceStatsQuery,
+  productsQuery,
+  type DeleteVars,
+  type SaveVars,
+} from '../client/queries'
 import { Link } from '@tanstack/react-router'
-import { shortStore, yen } from '../client/format'
+import { dayLabel, isoMonth, parseIso, shortStore, yen } from '../client/format'
 import { CategoryChips, MoneyInput } from './bits'
 
 interface ItemDraft {
@@ -399,6 +407,21 @@ export function ExpenseForm({
     items.length > 0 && !charges.some((c) => c.kind === 'tax') && gap > 0 && gap <= Math.ceil(itemTotal * 0.1) + 1
   const mismatch = hasLines && gap !== 0
 
+  // The same receipt saved two times (an order email and a photo): check the cached months of the
+  // day before, the day, and the day after.
+  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date)
+  const monthOf = (n: number) => {
+    const d = parseIso(date)
+    d.setDate(d.getDate() + n)
+    return isoMonth(d)
+  }
+  const nearMonths = validDate ? [...new Set([-1, 0, 1].map(monthOf))] : []
+  const nearExpenses = useQueries({
+    queries: nearMonths.map((ym) => ({ ...monthQuery(ym), enabled: amountN > 0 })),
+    combine: (results) => results.flatMap((r) => r.data ?? []),
+  })
+  const dup = findDuplicate({ id: initial.id, date, amount: amountN, store: store.trim() }, nearExpenses)
+
   function updateCharge(key: number, patch: Partial<ChargeDraft>) {
     setCharges((list) => list.map((c) => (c.key === key ? { ...c, ...patch } : c)))
   }
@@ -666,8 +689,19 @@ export function ExpenseForm({
         </details>
       )}
 
+      {dup && (
+        <div className="warn" role="status">
+          You saved <b className="num">{yen(dup.amount)}</b>
+          {dup.store && <> at {shortStore(dup.store)}</>} on {dayLabel(dup.date)} already. Is this the
+          same receipt?{' '}
+          <Link to="/expense/$id" params={{ id: dup.id }} search={{ date: dup.date }}>
+            Open it
+          </Link>
+        </div>
+      )}
+
       <button className="btn btn-primary btn-block" style={{ minHeight: 56, fontSize: '1.0625rem' }}>
-        {isNew ? `Save ${amountN ? yen(amountN) : ''}` : 'Save changes'}
+        {dup ? 'Save anyway' : isNew ? `Save ${amountN ? yen(amountN) : ''}` : 'Save changes'}
       </button>
       {!isNew && (
         <button
