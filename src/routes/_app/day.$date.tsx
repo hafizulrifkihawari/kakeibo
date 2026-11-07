@@ -36,7 +36,7 @@ function DayView() {
     setHidden((h) => new Set(h).add(e.id))
     const t = setTimeout(() => {
       timers.current.delete(e.id)
-      remove.mutate({ id: e.id, date: e.date })
+      remove.mutate({ id: e.id, date: e.date, at: Date.now() })
     }, UNDO_MS)
     timers.current.set(e.id, t)
     setToast({

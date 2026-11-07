@@ -1,10 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useIsMutating } from '@tanstack/react-query'
 import { CATEGORIES, CATEGORY_BY_ID, type CategoryId } from '../../shared/categories'
 import type { Expense } from '../../shared/types'
 import { budgetStatus, dailyAllowance } from '../../shared/budget'
 import { daysInMonth, isoMonth, yen } from '../client/format'
+import { getSyncNotice, setSyncNotice, subscribeSyncNotice } from '../client/queries'
 
 export function CategoryDot({ id }: { id: CategoryId }) {
   const c = CATEGORY_BY_ID[id]
@@ -154,6 +155,17 @@ export function useOnline(): boolean {
 export function OfflineBanner() {
   const online = useOnline()
   const queued = useIsMutating({ predicate: (m) => m.state.isPaused })
+  const notice = useSyncExternalStore(subscribeSyncNotice, getSyncNotice, () => null)
+  if (notice) {
+    return (
+      <div className="banner" role="alert">
+        {notice}{' '}
+        <button type="button" onClick={() => setSyncNotice(null)}>
+          OK
+        </button>
+      </div>
+    )
+  }
   if (online && !queued) return null
   return (
     <div className="banner" role="status">

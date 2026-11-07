@@ -841,6 +841,18 @@ textarea.input {
   padding: 8px 16px;
 }
 
+.banner button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  min-height: 32px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
 .toast {
   max-width: calc(100vw - 2 * var(--gutter));
   position: fixed;

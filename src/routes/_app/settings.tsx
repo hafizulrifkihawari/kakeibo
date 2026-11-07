@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { changePassword, getVisionUsage, logout, startTelegramLink, unlinkTelegram } from '../../server/fns'
 import { fetchMe, forgetMe, keys, persister } from '../../client/queries'
 import { PasswordInput, useOnline } from '../../components/bits'
@@ -14,6 +14,17 @@ function Settings() {
   const online = useOnline()
   const usage = useQuery({ queryKey: ['visionUsage'], queryFn: () => getVisionUsage(), enabled: online })
   const [offlineState, setOfflineState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+
+  // After a reload the reader files can already be in the service worker cache.
+  useEffect(() => {
+    let live = true
+    offlineFilesCached().then((cached) => {
+      if (live && cached) setOfflineState((s) => (s === 'idle' ? 'ready' : s))
+    })
+    return () => {
+      live = false
+    }
+  }, [])
 
   async function prepareOffline() {
     setOfflineState('loading')
@@ -203,4 +214,16 @@ function ChangePasswordCard() {
       </button>
     </form>
   )
+}
+
+const OFFLINE_FILES = ['/models/det.onnx', '/models/rec.onnx', '/models/dict.txt', '/ort/ort-wasm-simd-threaded.wasm']
+
+async function offlineFilesCached(): Promise<boolean> {
+  try {
+    if (typeof caches === 'undefined') return false
+    const found = await Promise.all(OFFLINE_FILES.map((f) => caches.match(f)))
+    return found.every(Boolean)
+  } catch {
+    return false
+  }
 }

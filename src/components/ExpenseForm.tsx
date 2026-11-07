@@ -729,7 +729,7 @@ export function ExpenseForm({
           className="btn btn-ghost btn-danger btn-block"
           onClick={() => {
             if (!confirm(`Delete this ${CATEGORY_BY_ID[categoryId].en.toLowerCase()} expense?`)) return
-            remove.mutate({ id: initial.id, date: initial.date })
+            remove.mutate({ id: initial.id, date: initial.date, at: Date.now() })
             onDone(null)
           }}
         >

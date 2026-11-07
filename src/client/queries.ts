@@ -153,6 +153,39 @@ export interface SaveVars {
 export interface DeleteVars {
   id: string
   date: string
+  /** When the user asked for the delete. The server ignores it if a newer edit exists. */
+  at?: number
+}
+
+// A change the server did not apply: a newer edit exists, or it failed after its retries.
+// The banner shows it, because the list on screen silently goes back to the saved data.
+type NoticeListener = () => void
+let syncNotice: string | null = null
+const noticeListeners = new Set<NoticeListener>()
+
+export function getSyncNotice(): string | null {
+  return syncNotice
+}
+
+export function subscribeSyncNotice(fn: NoticeListener): () => void {
+  noticeListeners.add(fn)
+  return () => noticeListeners.delete(fn)
+}
+
+export function setSyncNotice(message: string | null) {
+  syncNotice = message
+  noticeListeners.forEach((fn) => fn())
+}
+
+const STALE_NOTICE = 'A change was not saved, because a newer edit exists on another device.'
+const FAILED_NOTICE = 'A change could not be saved. Check it and try again.'
+
+function noteResult(res: unknown) {
+  if ((res as { stale?: boolean } | undefined)?.stale) setSyncNotice(STALE_NOTICE)
+}
+
+function noteError(err: unknown) {
+  if (!String((err as Error | undefined)?.message).includes('UNAUTHORIZED')) setSyncNotice(FAILED_NOTICE)
 }
 
 export interface SaveIncomeVars {
@@ -193,6 +226,8 @@ export function createQueryClient(): QueryClient {
 
   // Defaults keyed by mutationKey, so paused offline mutations can resume after a reload.
   qc.setMutationDefaults(['saveExpense'], {
+    onSuccess: noteResult,
+    onError: noteError,
     mutationFn: ({ expense }: SaveVars) => saveExpense({ data: expense }),
     onMutate: async ({ expense, prevDate }: SaveVars) => {
       const ym = expense.date.slice(0, 7)
@@ -213,7 +248,9 @@ export function createQueryClient(): QueryClient {
   })
 
   qc.setMutationDefaults(['deleteExpense'], {
-    mutationFn: ({ id }: DeleteVars) => deleteExpense({ data: { id } }),
+    onSuccess: noteResult,
+    onError: noteError,
+    mutationFn: ({ id, at }: DeleteVars) => deleteExpense({ data: { id, at } }),
     onMutate: async ({ id, date }: DeleteVars) => {
       const key = keys.month(date.slice(0, 7))
       await qc.cancelQueries({ queryKey: key })
@@ -228,6 +265,8 @@ export function createQueryClient(): QueryClient {
   })
 
   qc.setMutationDefaults(['saveIncome'], {
+    onSuccess: noteResult,
+    onError: noteError,
     mutationFn: ({ income }: SaveIncomeVars) => saveIncome({ data: income }),
     onMutate: async ({ income, prevDate }: SaveIncomeVars) => {
       const ym = income.date.slice(0, 7)
@@ -246,7 +285,9 @@ export function createQueryClient(): QueryClient {
   })
 
   qc.setMutationDefaults(['deleteIncome'], {
-    mutationFn: ({ id }: DeleteVars) => deleteIncome({ data: { id } }),
+    onSuccess: noteResult,
+    onError: noteError,
+    mutationFn: ({ id, at }: DeleteVars) => deleteIncome({ data: { id, at } }),
     onMutate: async ({ id, date }: DeleteVars) => {
       const key = keys.income(date.slice(0, 7))
       await qc.cancelQueries({ queryKey: key })

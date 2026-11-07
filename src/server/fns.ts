@@ -166,6 +166,13 @@ const LINK_MINUTES = 10
 const RESET_MINUTES = 30
 const RESETS_PER_HOUR = 3
 
+/** Makes every unused reset link of the user stop working. The rows stay for the rate limit. */
+function expireResets(userId: number, now: number) {
+  return env.DB.prepare(
+    'UPDATE password_resets SET expires_at = ? WHERE user_id = ? AND used_at IS NULL AND expires_at > ?',
+  ).bind(now, userId, now)
+}
+
 /** A t.me link that opens the bot; pressing Start sends the token to /api/telegram. */
 export const startTelegramLink = createServerFn({ method: 'POST' }).handler(async () => {
   const me = await requireUser()
@@ -186,7 +193,12 @@ export const startTelegramLink = createServerFn({ method: 'POST' }).handler(asyn
 
 export const unlinkTelegram = createServerFn({ method: 'POST' }).handler(async () => {
   const me = await requireUser()
-  await env.DB.prepare('UPDATE users SET telegram_chat_id = NULL WHERE id = ?').bind(me.id).run()
+  // Links not opened yet and reset links already sent stop working with the chat.
+  await env.DB.batch([
+    env.DB.prepare('UPDATE users SET telegram_chat_id = NULL WHERE id = ?').bind(me.id),
+    env.DB.prepare('DELETE FROM telegram_links WHERE user_id = ?').bind(me.id),
+    expireResets(me.id, Date.now()),
+  ])
   return null
 })
 
@@ -209,11 +221,18 @@ export const requestPasswordReset = createServerFn({ method: 'POST' })
       .first<{ n: number }>()
     if ((recent?.n ?? 0) >= RESETS_PER_HOUR) return null
     const token = randomToken()
-    await env.DB.prepare(
-      'INSERT INTO password_resets (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
-    )
-      .bind(await sha256(token), user.id, now, now + RESET_MINUTES * 60_000)
-      .run()
+    // Only the newest link works. Rows older than the rate window are not needed any more.
+    await env.DB.batch([
+      expireResets(user.id, now),
+      env.DB.prepare('DELETE FROM password_resets WHERE user_id = ? AND created_at <= ? AND expires_at <= ?').bind(
+        user.id,
+        now - 3_600_000,
+        now,
+      ),
+      env.DB.prepare(
+        'INSERT INTO password_resets (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
+      ).bind(await sha256(token), user.id, now, now + RESET_MINUTES * 60_000),
+    ])
     try {
       await sendTelegram(
         user.telegram_chat_id,
@@ -245,7 +264,10 @@ export const resetPassword = createServerFn({ method: 'POST' })
       .first<{ user_id: number }>()
     if (!reset) throw new Error('This reset link is not valid any more. Ask for a new one.')
     await setPassword(reset.user_id, data.password)
-    await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(reset.user_id).run()
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(reset.user_id),
+      expireResets(reset.user_id, now),
+    ])
     const user = await env.DB.prepare('SELECT telegram_chat_id FROM users WHERE id = ?')
       .bind(reset.user_id)
       .first<{ telegram_chat_id: number | null }>()
@@ -479,16 +501,18 @@ export const saveExpense = createServerFn({ method: 'POST' })
 
 export const deleteExpense = createServerFn({ method: 'POST' })
   .validator((input: unknown) => {
-    const id = str((input as Record<string, unknown>)?.id, 64)
-    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Bad id.')
-    return { id }
+    return validateDelete(input)
   })
   .handler(async ({ data }) => {
     const user = await requireUser()
-    await env.DB.prepare('UPDATE expenses SET deleted_at = ? WHERE id = ? AND user_id = ?')
-      .bind(Date.now(), data.id, user.id)
+    // An older offline delete never removes an edit made after it, as with saves.
+    const res = await env.DB.prepare(
+      `UPDATE expenses SET deleted_at = ?
+       WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND updated_at <= ?`,
+    )
+      .bind(Date.now(), data.id, user.id, data.at)
       .run()
-    return { ok: true }
+    return { ok: true, stale: !res.meta.changes }
   })
 
 // ── Reports ─────────────────────────────────────────────────────────────
@@ -627,16 +651,17 @@ export const saveIncome = createServerFn({ method: 'POST' })
 
 export const deleteIncome = createServerFn({ method: 'POST' })
   .validator((input: unknown) => {
-    const id = str((input as Record<string, unknown>)?.id, 64)
-    if (!ID_RE.test(id)) throw new Error('Bad id.')
-    return { id }
+    return validateDelete(input)
   })
   .handler(async ({ data }) => {
     const user = await requireUser()
-    await env.DB.prepare('UPDATE incomes SET deleted_at = ? WHERE id = ? AND user_id = ?')
-      .bind(Date.now(), data.id, user.id)
+    const res = await env.DB.prepare(
+      `UPDATE incomes SET deleted_at = ?
+       WHERE id = ? AND user_id = ? AND deleted_at IS NULL AND updated_at <= ?`,
+    )
+      .bind(Date.now(), data.id, user.id, data.at)
       .run()
-    return { ok: true }
+    return { ok: true, stale: !res.meta.changes }
   })
 
 // ── Budgets ─────────────────────────────────────────────────────────────
@@ -791,6 +816,16 @@ export const extractEmail = createServerFn({ method: 'POST' })
 // ── Products and prices ─────────────────────────────────────────────────
 
 const ID_RE = /^[0-9a-f-]{36}$/i
+
+// A delete carries the time the user asked for it. A delete queued by an older client has no
+// time, so it uses the current time, as before.
+function validateDelete(input: unknown): { id: string; at: number } {
+  const o = (input ?? {}) as Record<string, unknown>
+  const id = str(o.id, 64)
+  if (!ID_RE.test(id)) throw new Error('Bad id.')
+  const at = Number(o.at)
+  return { id, at: Number.isFinite(at) && at > 0 ? at : Date.now() }
+}
 
 export const getPriceStats = createServerFn({ method: 'POST' })
   .validator((input: unknown) => {

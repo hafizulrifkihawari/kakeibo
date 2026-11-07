@@ -184,7 +184,7 @@ function IncomeForm({ ym, initial, onDone }: { ym: string; initial: Income | nul
             style={{ flex: 1 }}
             onClick={() => {
               if (!confirm('Delete this income?')) return
-              remove.mutate({ id: initial.id, date: initial.date })
+              remove.mutate({ id: initial.id, date: initial.date, at: Date.now() })
               onDone()
             }}
           >

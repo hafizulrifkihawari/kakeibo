@@ -29,7 +29,12 @@ export async function visionOcr(imageBase64: string): Promise<VisionResult> {
   )
     .bind(currentMonth())
     .first<{ count: number }>()
-  if (!row || row.count > limit) return { ok: false, reason: 'quota' }
+  if (!row) return { ok: false, reason: 'quota' }
+  if (row.count > limit) {
+    // Give the unit back, so the count stays at the limit and shows the real usage.
+    await releaseUnit()
+    return { ok: false, reason: 'quota' }
+  }
 
   try {
     const res = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${key}`, {
@@ -46,7 +51,12 @@ export async function visionOcr(imageBase64: string): Promise<VisionResult> {
       }),
       signal: AbortSignal.timeout(15_000),
     })
-    if (!res.ok) return { ok: false, reason: `http-${res.status}` }
+    if (!res.ok) {
+      // Vision rejected the request, so it used no unit. A timeout keeps the unit: the call may
+      // have run.
+      await releaseUnit()
+      return { ok: false, reason: `http-${res.status}` }
+    }
     const json = (await res.json()) as {
       responses?: { fullTextAnnotation?: { text?: string }; error?: { message?: string } }[]
     }
@@ -56,4 +66,11 @@ export async function visionOcr(imageBase64: string): Promise<VisionResult> {
   } catch {
     return { ok: false, reason: 'network' }
   }
+}
+
+async function releaseUnit() {
+  await env.DB.prepare('UPDATE ocr_usage SET count = count - 1 WHERE month = ? AND count > 0')
+    .bind(currentMonth())
+    .run()
+    .catch(() => {})
 }

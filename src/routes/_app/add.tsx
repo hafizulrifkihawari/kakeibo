@@ -74,6 +74,8 @@ function AddPage() {
   const pickRef = useRef<HTMLInputElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
   const started = useRef(false)
+  /** The number of the newest read. An older read that ends later does not change the page. */
+  const run = useRef(0)
   /** The photo and the first reading of the last scan, for scan collection (see saveScan). */
   const scanned = useRef<{ expenseId: string; image: string; engine: OcrEngine; draft: string } | null>(null)
 
@@ -96,8 +98,10 @@ function AddPage() {
   }
 
   async function fromEmail(mail: EmailText) {
+    const id = ++run.current
     setError('')
     setDraft(null)
+    scanned.current = null
     if (!mail.text.trim()) {
       setError('No text found in this email.')
       return
@@ -105,6 +109,7 @@ function AddPage() {
     setReading(true)
     try {
       const order = await extractEmail({ data: mail }).catch(() => null)
+      if (id !== run.current) return
       if (!order) {
         // Offline, or the AI is not available: read the text like a receipt.
         fromText(mail.text, 'email', 'The AI could not read this email. Check every line.')
@@ -128,7 +133,7 @@ function AddPage() {
         note: order.needsReview ? '⚠️ The items do not add up to the total. Check them.' : undefined,
       })
     } finally {
-      setReading(false)
+      if (id === run.current) setReading(false)
     }
   }
 
@@ -141,22 +146,41 @@ function AddPage() {
   }
 
   async function scan(file: File) {
+    const id = ++run.current
+    const current = () => id === run.current
     setError('')
     setDraft(null)
     scanned.current = null
     try {
       const img = await prepareImage(file)
+      if (!current()) return
       setPreview(img.previewUrl)
-      const out = await readReceipt(img, setStatus)
+      const out = await readReceipt(img, (s) => current() && setStatus(s))
+      if (!current()) return
       if (!out.text.trim()) throw new Error('No text found. Try again with the whole receipt in the photo and good light.')
       const read = fromText(out.text, out.engine, out.fallbackReason ? FALLBACK_LABEL[out.fallbackReason] : undefined)
       scanned.current = { ...read, image: img.base64, engine: out.engine }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not read the receipt.')
+      if (current()) setError(e instanceof Error ? e.message : 'Could not read the receipt.')
     } finally {
-      setStatus(null)
+      if (current()) setStatus(null)
     }
   }
+
+  // The page stays mounted when ?mode= changes. Start the new mode from a clean state.
+  const shownMode = useRef(mode)
+  useEffect(() => {
+    if (shownMode.current === mode) return
+    shownMode.current = mode
+    run.current++
+    started.current = false
+    scanned.current = null
+    setDraft(mode === 'manual' ? { expense: blank() } : null)
+    setStatus(null)
+    setReading(false)
+    setPreview(null)
+    setError('')
+  }, [mode])
 
   useEffect(() => {
     if (mode !== 'photo' || started.current) return
@@ -291,8 +315,12 @@ function AddPage() {
           />
           <button
             className="btn btn-primary btn-block"
-            disabled={!pasted.trim()}
-            onClick={() => fromText(pasted, 'paste')}
+            disabled={!pasted.trim() || reading}
+            onClick={() => {
+              run.current++
+              scanned.current = null
+              fromText(pasted, 'paste')
+            }}
           >
             Read text
           </button>

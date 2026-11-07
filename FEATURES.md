@@ -40,10 +40,10 @@ What Kakeibo can do now. Update this file when a change adds, removes, or change
 | Prices | Product kind | Set the kind of a product. Kinds include furniture and interior, hobby and gifts, and services and bills. |
 | Account | Register and log in | Use an email address and a password. |
 | Account | Change password | Set a new password. Other devices are logged out. |
-| Account | Telegram reset | Link Telegram, then use "Forgot password?" to get a one-time reset link. |
+| Account | Telegram reset | Link Telegram, then use "Forgot password?" to get a one-time reset link. Only the newest link works, and unlinking Telegram stops every link already sent. |
 | Settings | Vision usage | Show how many Google Vision scans you used this month. |
 | Settings | Offline reader | Download the on-device receipt reader (about 35 MB). |
 | Offline | Install | Add the app to the home screen (PWA). |
-| Offline | Sync queue | Changes made offline wait and sync when the network comes back. A banner shows them. |
+| Offline | Sync queue | Changes made offline wait and sync when the network comes back. A banner shows them. An older offline edit or delete never replaces a newer edit from another device, and the banner says when a change was not saved. |
 | Admin | Password reset script | `npm run admin -- reset <email>` sets a temporary password for a user. |
 | Admin | Scan collection script | `npm run admin -- collect <email> on\|off` turns scan collection on or off for a user. |
