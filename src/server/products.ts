@@ -38,6 +38,10 @@ export interface ProductSummary {
   lastDate: string
   lastStore: string
   minStore: string
+  /** Every store where the product was bought, newest first. */
+  stores: string[]
+  /** The expense categories of the purchases. */
+  categories: string[]
 }
 
 export interface ProductDetail {
@@ -107,10 +111,12 @@ interface PurchaseRow {
   expense_id: string
   date: string
   store: string | null
+  category_id: string
 }
 
 const PURCHASES_SQL = `SELECT i.product_id, i.price, i.qty, i.unit, i.size, i.size_unit, i.name AS item_name,
-    pr.name AS product_name, e.id AS expense_id, e.date, e.store
+    pr.name AS product_name, e.id AS expense_id, e.date, e.store,
+    e.category_id
   FROM expense_items i JOIN expenses e ON e.id = i.expense_id
   LEFT JOIN products pr ON pr.id = i.product_id
   WHERE e.user_id = ? AND e.deleted_at IS NULL`
@@ -202,6 +208,12 @@ export async function priceStats(
   return out
 }
 
+function addTo(map: Map<number, Set<string>>, id: number, value: string): void {
+  const set = map.get(id) ?? new Set<string>()
+  set.add(value)
+  map.set(id, set)
+}
+
 export async function listProducts(userId: number): Promise<ProductSummary[]> {
   const [{ results: products }, { results: rows }] = await Promise.all([
     env.DB.prepare('SELECT id, name, en, reading, kind FROM products WHERE user_id = ?')
@@ -212,10 +224,14 @@ export async function listProducts(userId: number): Promise<ProductSummary[]> {
       .all<PurchaseRow>(),
   ])
   const byProduct = new Map<number, Purchase[]>()
+  const stores = new Map<number, Set<string>>()
+  const categories = new Map<number, Set<string>>()
   for (const r of rows) {
     const list = byProduct.get(r.product_id) ?? []
     list.push(toPurchase(r))
     byProduct.set(r.product_id, list)
+    if (r.store) addTo(stores, r.product_id, r.store)
+    addTo(categories, r.product_id, r.category_id)
   }
   return products
     .map((p) => {
@@ -234,6 +250,8 @@ export async function listProducts(userId: number): Promise<ProductSummary[]> {
         lastDate: list[0]?.date ?? '',
         lastStore: st?.last.store ?? '',
         minStore: st?.min.store ?? '',
+        stores: [...(stores.get(p.id) ?? [])],
+        categories: [...(categories.get(p.id) ?? [])],
       }
     })
     .filter((p) => p.count > 0)

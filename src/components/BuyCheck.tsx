@@ -11,6 +11,7 @@ import {
 } from '../../shared/products'
 import type { ProductSummary } from '../server/products'
 import { shortStore, yen } from '../client/format'
+import { productMatcher } from '../client/product-search'
 import { productQuery, productsQuery } from '../client/queries'
 import { MoneyInput, useOnline } from './bits'
 
@@ -51,13 +52,8 @@ export function BuyCheck({ open, onClose }: { open: boolean; onClose: () => void
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  const matches = useMemo(() => {
-    const s = search.trim().toLowerCase()
-    if (!s) return []
-    return (products.data ?? [])
-      .filter((p) => p.name.toLowerCase().includes(s) || p.en.toLowerCase().includes(s) || p.reading.includes(s))
-      .slice(0, 6)
-  }, [products.data, search])
+  const match = useMemo(() => productMatcher(products.data ?? []), [products.data])
+  const matches = useMemo(() => (search.trim() ? match(search).slice(0, 6) : []), [match, search])
 
   const detail = useQuery({ ...productQuery(picked?.id ?? 0), enabled: open && online && !!picked })
 

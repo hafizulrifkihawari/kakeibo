@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { ITEM_KINDS, KIND_BY_ID, perLabel, type ItemKind } from '../../../shared/products'
 import { shortStore, yen } from '../../client/format'
+import { productMatcher } from '../../client/product-search'
 import { keys, productsQuery } from '../../client/queries'
 import { linkOldItems } from '../../server/fns'
 import { Empty, useOnline } from '../../components/bits'
@@ -32,14 +33,8 @@ function Products() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [online])
 
-  const list = useMemo(() => {
-    const s = search.trim().toLowerCase()
-    return (q.data ?? []).filter(
-      (p) =>
-        (!kind || p.kind === kind) &&
-        (!s || p.name.toLowerCase().includes(s) || p.en.toLowerCase().includes(s) || p.reading.includes(s)),
-    )
-  }, [q.data, search, kind])
+  const match = useMemo(() => productMatcher(q.data ?? []), [q.data])
+  const list = useMemo(() => match(search).filter((p) => !kind || p.kind === kind), [match, search, kind])
   const kindsInUse = new Set((q.data ?? []).map((p) => p.kind))
 
   return (
@@ -54,7 +49,7 @@ function Products() {
       <input
         className="input"
         type="search"
-        placeholder="Search: カルビー, chips, かるびー"
+        placeholder="Name, karubi, store, or kind"
         aria-label="Search products"
         value={search}
         onChange={(e) => setSearch(e.target.value)}

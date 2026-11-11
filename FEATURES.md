@@ -35,6 +35,7 @@ What Kakeibo can do now. Update this file when a change adds, removes, or change
 | Reports | Insights | Show short findings, also offline. Examples: the largest category changes, the months over budget, and the month-end projection. |
 | Reports | AI summary | Tap "Summarize with AI" to get a short written review. Only the totals go to the AI. The app keeps the summary until the numbers change. |
 | Prices | Product list | Show your products and their prices. |
+| Prices | Product search | Find a product by its name in kanji, kana, or romaji ("karubi" finds カルビー), its furigana reading, its English name, a store where you bought it, its kind, or its expense category. Every word in the search must match. "Should I buy this?" uses the same search. |
 | Prices | Price history | Show earlier prices for a product, with the average, the lowest, and the last price at each store. Show the price change in the last 3 months. Compare by one piece or by 100 g / 100 ml, and show the price for each kg or litre. |
 | Prices | Should I buy this? | Pick a product and enter the shelf price (and the pack size for food sold by weight). See if the price is good, normal, or high for you, and which store is usually cheaper. Works offline. Saves nothing. |
 | Prices | Product kind | Set the kind of a product. Kinds include furniture and interior, hobby and gifts, and services and bills. |
